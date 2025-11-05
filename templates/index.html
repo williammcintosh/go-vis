@@ -11,13 +11,13 @@
     <div id="timerContainer">
       <div id="timerBar"></div>
     </div>
+
     <div id="board"></div>
+
     <button id="checkBtn">Check</button>
 
     <script>
-      const board = document.getElementById('board');
       const checkBtn = document.getElementById('checkBtn');
-      const size = 5;
       const stones = [
         { x: 1, y: 1, color: 'black' },
         { x: 3, y: 2, color: 'black' },
@@ -25,68 +25,109 @@
         { x: 4, y: 4, color: 'white' },
       ];
 
-      function drawGrid() {
-        for (let y = 0; y < size; y++) {
-          for (let x = 0; x < size; x++) {
-            const cell = document.createElement('div');
-            cell.classList.add('cell');
-            cell.dataset.x = x;
-            cell.dataset.y = y;
-            cell.addEventListener('click', toggleStone);
-            board.appendChild(cell);
+      const size = 4; // 4x4 squares => 5x5 intersections
+      let interactionEnabled = false;
+
+      function drawBoard() {
+        const board = document.getElementById('board');
+        const boardSize = board.offsetWidth; // in px
+        const gap = boardSize / size;
+
+        // draw vertical lines
+        for (let i = 0; i <= size; i++) {
+          const line = document.createElement('div');
+          line.classList.add('line', 'v');
+          line.style.left = `${i * gap - 1}px`;
+          board.appendChild(line);
+        }
+
+        // draw horizontal lines
+        for (let i = 0; i <= size; i++) {
+          const line = document.createElement('div');
+          line.classList.add('line', 'h');
+          line.style.top = `${i * gap - 1}px`;
+          board.appendChild(line);
+        }
+
+        // intersections (clickable)
+        for (let y = 0; y <= size; y++) {
+          for (let x = 0; x <= size; x++) {
+            const inter = document.createElement('div');
+            inter.classList.add('intersection');
+            inter.dataset.x = x;
+            inter.dataset.y = y;
+            inter.style.left = `${(x / size) * 100}%`;
+            inter.style.top = `${(y / size) * 100}%`;
+            inter.addEventListener('click', toggleStone);
+            board.appendChild(inter);
           }
         }
       }
 
+      function toggleInteraction(enable) {
+        interactionEnabled = enable;
+        document.querySelectorAll('.intersection').forEach((point) => {
+          point.style.pointerEvents = enable ? 'auto' : 'none';
+        });
+
+        checkBtn.disabled = !enable;
+        checkBtn.style.opacity = enable ? '1' : '0.5';
+        checkBtn.style.cursor = enable ? 'pointer' : 'not-allowed';
+      }
+
       function showStones() {
         const timerBar = document.getElementById('timerBar');
-        let timeLeft = 10; // seconds
+        let timeLeft = 10;
+        toggleInteraction(false);
+
         const interval = setInterval(() => {
           timeLeft -= 0.1;
           timerBar.style.width = (timeLeft / 10) * 100 + '%';
           if (timeLeft <= 0) {
             clearInterval(interval);
             clearStones();
+            toggleInteraction(true);
           }
         }, 100);
 
         stones.forEach((s) => {
-          const cell = document.querySelector(
-            `.cell[data-x="${s.x}"][data-y="${s.y}"]`
+          const inter = document.querySelector(
+            `.intersection[data-x="${s.x}"][data-y="${s.y}"]`
           );
-          cell.classList.add(s.color);
+          inter.classList.add(s.color);
         });
       }
 
       function clearStones() {
         document
-          .querySelectorAll('.cell')
-          .forEach((c) => c.classList.remove('black', 'white'));
+          .querySelectorAll('.intersection')
+          .forEach((i) => i.classList.remove('black', 'white'));
       }
 
       function toggleStone(e) {
-        const cell = e.target;
-        if (cell.classList.contains('white')) {
-          cell.classList.remove('white');
-          cell.classList.add('black');
-        } else if (cell.classList.contains('black')) {
-          cell.classList.remove('black');
+        if (!interactionEnabled) return;
+        const point = e.target;
+        if (point.classList.contains('white')) {
+          point.classList.remove('white');
+          point.classList.add('black');
+        } else if (point.classList.contains('black')) {
+          point.classList.remove('black');
         } else {
-          cell.classList.add('white');
+          point.classList.add('white');
         }
       }
 
       function checkAnswers() {
         document.querySelectorAll('.marker').forEach((m) => m.remove());
 
-        for (let y = 0; y < size; y++) {
-          for (let x = 0; x < size; x++) {
-            const cell = document.querySelector(
-              `.cell[data-x="${x}"][data-y="${y}"]`
+        for (let y = 0; y <= size; y++) {
+          for (let x = 0; x <= size; x++) {
+            const inter = document.querySelector(
+              `.intersection[data-x="${x}"][data-y="${y}"]`
             );
             const expected = stones.find((s) => s.x === x && s.y === y);
-            const playerWhite = cell.classList.contains('white');
-            const playerBlack = cell.classList.contains('black');
+            const playerWhite = inter.classList.contains('white');
+            const playerBlack = inter.classList.contains('black');
             const marker = document.createElement('div');
             marker.classList.add('marker');
 
@@ -103,14 +144,14 @@
             }
 
             marker.textContent = correct ? '✅' : '❌';
-            cell.appendChild(marker);
+            inter.appendChild(marker);
           }
         }
       }
 
       checkBtn.addEventListener('click', checkAnswers);
 
-      drawGrid();
+      drawBoard();
       showStones();
     </script>
   </body>

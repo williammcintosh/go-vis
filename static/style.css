@@ -1,95 +1,28 @@
 :root {
-  --main-width: 30%;
+  --main-width: 80vw; /* relative to viewport width */
+  --max-board: 400px; /* caps size on desktop */
 }
 
+/* general layout */
 body {
   display: flex;
-  flex-direction: column; /* stack vertically */
-  align-items: center; /* center horizontally */
-  justify-content: center; /* center vertically */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   height: 100vh;
   background: tan;
-  gap: 20px; /* space between items */
+  gap: 20px;
   margin: 0;
 }
 
-#board {
-  display: grid;
-  width: var(--main-width);
-  aspect-ratio: 1;
-  grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: repeat(5, 1fr);
-  background: tan;
-  position: relative;
-  border: 3px solid black;
-}
-
-.cell {
-  background: tan;
-  position: relative;
-  cursor: pointer;
-  border: 1px solid black;
-  z-index: 1;
-}
-
-.cell.black::after,
-.cell.white::after {
-  content: '';
-  position: absolute;
-  width: 70%; /* stone diameter relative to cell */
-  height: 70%;
-  border-radius: 50%;
-  top: 15%; /* centers it vertically */
-  left: 15%; /* centers it horizontally */
-  z-index: 2; /* stones on layer 2 */
-}
-
-.cell.black::after {
-  background: black;
-}
-.cell.white::after {
-  background: white;
-  border: 1px solid #aaa;
-}
-
-.cell[style*='pointer-events: none'] {
-  cursor: not-allowed;
-}
-
-#checkBtn {
-  margin-top: 20px;
-  padding: 10px 20px;
-  font-size: 18px;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-#checkBtn:hover {
-  background: #43a047;
-}
-#checkBtn:disabled {
-  background: #a9c39b;
-  cursor: not-allowed;
-}
-
-.marker {
-  position: absolute;
-  font-size: 28px;
-  top: 5px;
-  left: 18px;
-  z-index: 3; /* markers above stones */
-  pointer-events: none; /* so clicks still go through */
-}
-
+/* timer */
 #timerContainer {
-  width: var(--main-width);
-  height: 10px;
+  width: var(--max-board);
+  height: 20px;
   background: #ccc;
-  margin-bottom: 20px;
   border-radius: 5px;
   overflow: hidden;
+  margin-bottom: 40px; /* distance below the timer bar */
 }
 
 #timerBar {
@@ -99,11 +32,107 @@ body {
   transition: width 0.1s linear;
 }
 
-@keyframes shrink {
-  from {
-    width: 100%;
-  }
-  to {
-    width: 0%;
+/* Go board */
+/* Board container */
+#board {
+  position: relative;
+  width: var(--main-width);
+  max-width: var(--max-board);
+  aspect-ratio: 1 / 1; /* keeps board square */
+  margin: 0 auto;
+  background: tan;
+}
+
+/* grid lines */
+.line {
+  position: absolute;
+  background: black;
+  z-index: 0;
+}
+
+.line.v {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+}
+
+.line.h {
+  left: 0;
+  right: 0;
+  height: 2px;
+}
+
+/* intersection points (clickable) */
+.intersection {
+  position: absolute;
+  width: 6%;
+  height: 6%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1;
+}
+
+/* Stones */
+.intersection.black::after,
+.intersection.white::after {
+  content: '';
+  position: absolute;
+  width: calc(var(--max-board) / 4); /* one full cell wide (4x4 squares) */
+  height: calc(var(--max-board) / 4);
+  transform: translate(-40%, -40%);
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.intersection.black::after {
+  background: black;
+}
+
+.intersection.white::after {
+  background: white;
+  border: 1px solid #aaa;
+}
+
+/* check markers */
+.marker {
+  position: absolute;
+  font-size: 24px;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* button */
+#checkBtn {
+  width: var(--max-board);
+  padding: 12px 0;
+  font-size: 18px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 40px; /* distance between board and Check button */
+}
+
+#checkBtn:hover {
+  background: #43a047;
+}
+
+#checkBtn:disabled {
+  background: #a9c39b;
+  cursor: not-allowed;
+}
+
+/* when disabled clicking */
+.intersection[style*='pointer-events: none'] {
+  cursor: not-allowed;
+}
+
+/* Mobile handling */
+@media (max-width: 600px) {
+  :root {
+    --main-width: 95vw; /* fills more of the screen */
   }
 }
