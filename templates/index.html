@@ -8,6 +8,9 @@
     />
   </head>
   <body>
+    <div id="timerContainer">
+      <div id="timerBar"></div>
+    </div>
     <div id="board"></div>
     <button id="checkBtn">Check</button>
 
@@ -36,13 +39,23 @@
       }
 
       function showStones() {
+        const timerBar = document.getElementById('timerBar');
+        let timeLeft = 10; // seconds
+        const interval = setInterval(() => {
+          timeLeft -= 0.1;
+          timerBar.style.width = (timeLeft / 10) * 100 + '%';
+          if (timeLeft <= 0) {
+            clearInterval(interval);
+            clearStones();
+          }
+        }, 100);
+
         stones.forEach((s) => {
           const cell = document.querySelector(
             `.cell[data-x="${s.x}"][data-y="${s.y}"]`
           );
           cell.classList.add(s.color);
         });
-        setTimeout(clearStones, 10000);
       }
 
       function clearStones() {
