@@ -1,0 +1,63 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: tan;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(5, 60px);
+  grid-template-rows: repeat(5, 60px);
+  gap: 2px;
+  background: #000;
+}
+
+.cell {
+  width: 60px;
+  height: 60px;
+  background: tan;
+  position: relative;
+  cursor: pointer;
+}
+
+.cell.black::after,
+.cell.white::after {
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  top: 10px;
+  left: 10px;
+}
+
+.cell.black::after {
+  background: black;
+}
+.cell.white::after {
+  background: white;
+  border: 1px solid #aaa;
+}
+
+#checkBtn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 18px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#checkBtn:hover {
+  background: #43a047;
+}
+
+.marker {
+  position: absolute;
+  font-size: 28px;
+  top: 5px;
+  left: 18px;
+}

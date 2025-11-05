@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Go Memory Trainer</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div id="board"></div>
+    <button id="checkBtn">Check</button>
+
+    <script>
+      const board = document.getElementById('board');
+      const checkBtn = document.getElementById('checkBtn');
+      const size = 5;
+      const stones = [
+        { x: 1, y: 1, color: 'black' },
+        { x: 3, y: 2, color: 'black' },
+        { x: 2, y: 3, color: 'white' },
+        { x: 4, y: 4, color: 'white' },
+      ];
+
+      function drawGrid() {
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.dataset.x = x;
+            cell.dataset.y = y;
+            cell.addEventListener('click', toggleStone);
+            board.appendChild(cell);
+          }
+        }
+      }
+
+      function showStones() {
+        stones.forEach((s) => {
+          const cell = document.querySelector(
+            `.cell[data-x="${s.x}"][data-y="${s.y}"]`
+          );
+          cell.classList.add(s.color);
+        });
+        setTimeout(clearStones, 10000);
+      }
+
+      function clearStones() {
+        document
+          .querySelectorAll('.cell')
+          .forEach((c) => c.classList.remove('black', 'white'));
+      }
+
+      function toggleStone(e) {
+        const cell = e.target;
+        if (cell.classList.contains('white')) {
+          cell.classList.remove('white');
+          cell.classList.add('black');
+        } else if (cell.classList.contains('black')) {
+          cell.classList.remove('black');
+        } else {
+          cell.classList.add('white');
+        }
+      }
+
+      function checkAnswers() {
+        document.querySelectorAll('.marker').forEach((m) => m.remove());
+
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            const cell = document.querySelector(
+              `.cell[data-x="${x}"][data-y="${y}"]`
+            );
+            const expected = stones.find((s) => s.x === x && s.y === y);
+            const playerWhite = cell.classList.contains('white');
+            const playerBlack = cell.classList.contains('black');
+            const marker = document.createElement('div');
+            marker.classList.add('marker');
+
+            let correct = false;
+            if (expected) {
+              if (
+                (expected.color === 'white' && playerWhite) ||
+                (expected.color === 'black' && playerBlack)
+              ) {
+                correct = true;
+              }
+            } else {
+              if (!playerWhite && !playerBlack) correct = true;
+            }
+
+            marker.textContent = correct ? '✅' : '❌';
+            cell.appendChild(marker);
+          }
+        }
+      }
+
+      checkBtn.addEventListener('click', checkAnswers);
+
+      drawGrid();
+      showStones();
+    </script>
+  </body>
+</html>
