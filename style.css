@@ -104,10 +104,14 @@ body {
 /* markers */
 .marker {
   position: absolute;
-  font-size: 24px;
-  transform: translate(-50%, -50%);
+  font-size: 40px;
+  line-height: 1;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%); /* centers perfectly over intersection */
   z-index: 3;
   pointer-events: none;
+  opacity: 0.8;
 }
 
 #checkBtn {
@@ -144,14 +148,15 @@ body {
 }
 
 #feedbackMsg {
-  color: #000; /* force visible text */
+  margin: 0;
+  padding: 0;
+  color: #000;
   font-size: 1.2rem;
   opacity: 0;
   transition: opacity 0.6s ease;
   min-height: 1.5em;
   line-height: 1.5em;
   text-align: center;
-  z-index: 10;
 }
 
 #feedback.show-msg #feedbackMsg {
