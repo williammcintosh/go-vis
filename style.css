@@ -16,6 +16,8 @@ body {
   margin: 0;
   background: var(--tan-bg);
   font-family: system-ui, sans-serif;
+  transform: scale(1.1);
+  transform-origin: top center;
 }
 
 /* The whole game area is centered and doesn’t resize */
@@ -24,7 +26,8 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  height: 700px; /* adjust to match your layout */
+  height: auto;
+  padding-bottom: 40px;
 }
 
 /* ========= Timer ========= */
@@ -71,11 +74,11 @@ body {
   height: 2px;
 }
 
-/* intersection points */
+/* hitbox touch points */
 .intersection {
   position: absolute;
-  width: 100px; /* clickable hitbox size */
-  height: 100px;
+  width: calc(var(--max-board) / 4);
+  height: calc(var(--max-board) / 4);
   transform: translate(-50%, -50%);
   border-radius: 50%;
   cursor: pointer;
@@ -128,41 +131,39 @@ body {
   align-items: center;
 }
 
-/* lock the feedback space */
 #feedback {
   position: absolute;
-  top: calc(100% + 20px); /* places it just below board */
   left: 50%;
   transform: translateX(-50%);
+  background: rgba(245, 245, 220, 0.95);
+  border-radius: 15px;
+  padding: 0.5rem;
   text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  width: 80vw;
+  max-width: 300px;
+  display: none;
+  z-index: 10;
 }
 
-/* Fade only; never reflow */
-#feedbackMsg,
-#nextBtn {
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-
-#feedback.show-msg #feedbackMsg,
-#feedback.show-btn #nextBtn {
-  opacity: 1;
+#feedback.show {
+  display: block;
 }
 
 #feedbackMsg {
-  margin: 0;
+  font-size: 1.5rem;
+  /* margin-bottom: 1rem; */
+  margin: 0.5rem 0 !important;
   padding: 0;
-  color: #000;
-  font-size: 1.2rem;
-  opacity: 0;
-  transition: opacity 0.6s ease;
-  min-height: 1.5em;
-  line-height: 1.5em;
-  text-align: center;
 }
 
-#feedback.show-msg #feedbackMsg {
-  opacity: 1;
+#feedback button {
+  display: block;
+  width: 100%;
+  margin: 0.5rem 0;
+  font-size: 1.2rem;
+  padding: 12px 0;
+  border-radius: 10px;
 }
 
 /* ========= Global Button Styling ========= */
@@ -173,9 +174,9 @@ button {
   background: var(--green);
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 5px;
   cursor: pointer;
-  margin-top: 20px;
+  margin-top: 5px;
   transition: background 0.2s;
 }
 button:hover {
@@ -286,15 +287,65 @@ button:disabled {
 /* ========= Mobile Tweaks ========= */
 @media (max-width: 600px) {
   :root {
-    --main-width: 95vw;
-    --max-board: 90vw;
+    --main-width: 70vw !important;
+    --max-board: 70vw !important;
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 4vh !important;
+  }
+
+  .game-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: auto;
+    gap: 0.5rem;
+    margin: 0 auto;
   }
 
   #timerContainer {
-    width: 90vw;
+    width: 70vw !important;
+    height: 12px !important;
+    margin-bottom: 0.5rem !important;
   }
 
-  .marker {
-    font-size: 20px;
+  #board {
+    margin-top: 1.5rem !important;
+    position: relative;
+    width: 70vw !important;
+    height: 70vw !important;
+    margin: 1.5rem auto 0 auto !important;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  #checkBtn {
+    margin-top: 0.5rem !important;
+    font-size: 4vw !important;
+    padding: 8px 0 !important;
+    width: 55vw !important;
+  }
+
+  #feedback {
+    top: calc(100% + 2rem) !important;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* desktop: below the board */
+@media (min-width: 601px) {
+  #feedback {
+    position: relative;
+    left: 0;
+    transform: translate(0%, -50%);
+    margin: 2rem auto 0 auto;
+    width: 300px;
+    background: rgba(245, 245, 220, 0.9);
+    box-shadow: none;
   }
 }
