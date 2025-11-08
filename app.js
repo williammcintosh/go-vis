@@ -5,6 +5,11 @@ const aboutModal = document.getElementById('aboutModal');
 let lastFile = null;
 let currentMode = 'easy';
 
+window.progress = window.progress || {
+  easy: { level: 1 },
+  hard: { level: 1 },
+};
+
 // utility
 function showScreen(show, hide) {
   hide.classList.remove('active');
@@ -81,7 +86,7 @@ function parseSGFMoves(sgfText, limit = 5) {
 
     moves.push({ x, y, color });
   }
-  console.log('Parsed moves count:', moves.length);
+  //   console.log('Parsed moves count:', moves.length);
   //   console.log('Parsed moves:', moves);
   return moves;
 }
@@ -89,20 +94,6 @@ function parseSGFMoves(sgfText, limit = 5) {
 // ================ LISTENERS ======================== //
 
 const nextBtn = document.getElementById('nextBtn');
-nextBtn.addEventListener('click', async () => {
-  const feedback = document.getElementById('feedback');
-  feedback.style.display = 'none';
-  feedback.classList.remove('show');
-  setTimeout(() => (feedback.style.display = 'none'), 300);
-
-  if (window.activeGame?.timer) {
-    clearInterval(window.activeGame.timer);
-    window.activeGame.timer = null;
-  }
-  document.getElementById('board').replaceChildren();
-  document.querySelectorAll('.marker').forEach((m) => m.remove());
-  await startGame(currentMode); // keeps same difficulty level
-});
 
 const retryBtn = document.getElementById('retryBtn');
 retryBtn.addEventListener('click', async () => {
@@ -121,7 +112,7 @@ retryBtn.addEventListener('click', async () => {
 
   // Restart the same mode and sgf file
   window.activeGame.sgfText = window.activeGame.sgfText; // keep the same one
-  await startGame(currentMode, true);
+  startGame(window.activeGame.mode, true);
 });
 
 const homeBtn2 = document.getElementById('homeBtn2');
@@ -141,28 +132,77 @@ homeBtn2.addEventListener('click', () => {
   showScreen(intro, difficulty);
 });
 
+nextBtn.onclick = async () => {
+  const feedback = document.getElementById('feedback');
+  feedback.classList.remove('show');
+  feedback.style.display = 'none';
+
+  // kill timer
+  if (window.activeGame?.timer) {
+    clearInterval(window.activeGame.timer);
+    window.activeGame.timer = null;
+  }
+
+  // clear board
+  const board = document.getElementById('board');
+  board.replaceChildren();
+  document.querySelectorAll('.marker').forEach((m) => m.remove());
+
+  // start next challenge
+  await startGame(window.activeGame.mode);
+};
+
+// nextBtn.onclick = null;
+
+retryBtn.onclick = () => startGame(window.activeGame.mode, true);
+retryBtn.onclick = null;
+
 async function startGame(mode, retry = false) {
-  const config =
-    mode === 'hard'
-      ? { intervalSpeed: 50, stoneCount: 10 }
-      : { intervalSpeed: 40, stoneCount: 5 };
+  console.trace('startGame CALLED');
+
+  window.activeGame = { mode };
+  const level = window.progress[mode].level;
+
+  console.log(`=== START GAME (${mode.toUpperCase()}) ===`);
+  console.log(`Current level: ${level}`);
+
+  // scale with level
+  let stoneCount = mode === 'hard' ? 10 : 5;
+  let size = 4; // 4x4 squares = 5x5 intersections
+
+  // every 3 levels, bump stone count
+  if (level > 3) stoneCount += Math.floor((level - 1) / 3) * 2;
+
+  // every 5 levels, bump board size
+  if (level >= 1 && level <= 5) size = 4;
+  else if (level >= 6 && level <= 10) size = 5;
+  else if (level >= 11 && level <= 15) size = 6;
+  else size = 7; // optional, if you want it to keep growing later
+
+  console.log(`Configured board size: ${size}x${size}`);
+  console.log(`Stone count: ${stoneCount}`);
+
+  const config = {
+    intervalSpeed: mode === 'hard' ? 50 : 40,
+    stoneCount,
+    size,
+  };
+
+  // update CSS variable
+  document.documentElement.style.setProperty('--board-size', size);
+
   // Kill any old game state
   if (window.activeGame?.timer) {
     clearInterval(window.activeGame.timer);
     window.activeGame.timer = null;
   }
+
   const board = document.getElementById('board');
-  board.innerHTML = ''; // wipes all intersections and stones
-  document.querySelectorAll('.marker').forEach((m) => m.remove());
-  await new Promise((resolve) => requestAnimationFrame(resolve)); // force DOM repaint
   board.replaceChildren(); // completely wipes old intersections, lines, stones
+  await new Promise((resolve) => requestAnimationFrame(resolve)); // force DOM repaint
+
   document.querySelectorAll('.marker').forEach((m) => m.remove());
 
-  if (!retry) {
-    window.activeGame = {};
-  }
-
-  const size = 4; // 4x4 squares = 5x5 intersections
   document.documentElement.style.setProperty('--board-size', size);
 
   const checkBtn = document.getElementById('checkBtn');
@@ -221,7 +261,7 @@ async function startGame(mode, retry = false) {
   }
 
   function showStones() {
-    console.log('Active stones:', JSON.stringify(stones));
+    // console.log('Active stones:', JSON.stringify(stones));
 
     const timerBar = document.getElementById('timerBar');
     let timeLeft = 10;
@@ -322,6 +362,22 @@ async function startGame(mode, retry = false) {
     requestAnimationFrame(() => feedback.classList.add('show'));
     msg.textContent = allCorrect ? 'Well done!' : 'Missed a few!';
 
+    if (allCorrect) {
+      window.progress[window.activeGame.mode].level++;
+    } else {
+      // optional: lightly punish failure
+      window.progress[window.activeGame.mode].level = Math.max(
+        1,
+        window.progress[window.activeGame.mode].level - 1
+      );
+    }
+
+    console.log(
+      `New ${window.activeGame.mode} level: ${
+        window.progress[window.activeGame.mode].level
+      }`
+    );
+
     // fade in message and later button without layout bounce
     feedback.classList.add('show-msg');
     setTimeout(() => feedback.classList.add('show-btn'), 1500);
@@ -330,9 +386,12 @@ async function startGame(mode, retry = false) {
     nextBtn.style.display = 'inline-block';
   }
 
-  checkBtn.addEventListener('click', checkAnswers);
+  checkBtn.onclick = null;
+  checkBtn.onclick = checkAnswers;
 
   drawBoard();
   setTimeout(showStones, 50);
-  showStones();
+
+  if (checkBtn.disabled) return; // already processed
+  checkBtn.disabled = true;
 }
