@@ -11,16 +11,26 @@
   </head>
   <body>
     <body>
-      <div id="intro">
+      <div id="intro" class="screen active">
         <div class="top">
           <img src="images/go-icon.png" alt="Go Viz icon" class="logo" />
           <h1>Go Viz</h1>
           <p class="subtitle">Train your Go memory and visualization.</p>
         </div>
+
         <div class="btn-col">
-          <button id="trainBtn">Train</button>
+          <button id="continueBtn" style="display: none">Continue</button>
+          <button id="startBtn">Start</button>
           <button id="aboutBtn">About</button>
-          <div style="height: 100px"></div>
+        </div>
+      </div>
+
+      <!-- Restart Confirmation Modal -->
+      <div id="confirmModal" class="modal">
+        <div class="modal-content">
+          <p>This will erase your current progress. Are you sure?</p>
+          <button id="confirmYes">Yes, restart</button>
+          <button id="confirmNo">Cancel</button>
         </div>
       </div>
 

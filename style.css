@@ -360,6 +360,78 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* ========== About Page ==============*/
+#aboutModal {
+  display: none;
+  text-align: center;
+  padding: 20px;
+}
+
+#aboutModal.active {
+  display: block;
+}
+
+.about-content {
+  max-width: 400px;
+  margin: 0 auto;
+  background: #f8f1df;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.green-btn {
+  background-color: #4caf50;
+  color: white;
+  font-size: 1rem;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 15px;
+}
+
+/* ========== Restart Confirmation ==============*/
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: #f8f1df;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content button {
+  margin: 10px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#confirmYes {
+  background-color: #e53935;
+  color: white;
+}
+
+#confirmNo {
+  background-color: #4caf50;
+  color: white;
+}
+
 /* ========= Mobile Tweaks ========= */
 @media (max-width: 600px) {
   :root {
@@ -420,36 +492,6 @@ button:disabled {
     justify-content: space-between;
     width: 100%;
     gap: 0.5rem;
-  }
-
-  #aboutModal {
-    display: none;
-    text-align: center;
-    padding: 20px;
-  }
-
-  #aboutModal.active {
-    display: block;
-  }
-
-  .about-content {
-    max-width: 400px;
-    margin: 0 auto;
-    background: #f8f1df;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  }
-
-  .green-btn {
-    background-color: #4caf50;
-    color: white;
-    font-size: 1rem;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-top: 15px;
   }
 
   /* Both side buttons equal width */

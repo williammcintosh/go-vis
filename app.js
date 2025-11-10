@@ -35,6 +35,57 @@ for (let i = 1; i <= 50; i++) {
   });
 }
 
+// ---------- Save State ----------
+// Load saved progress if it exists
+const saved = JSON.parse(localStorage.getItem('goVizProgress') || 'null');
+const continueBtn = document.getElementById('continueBtn');
+const startBtn = document.getElementById('startBtn');
+const confirmModal = document.getElementById('confirmModal');
+const confirmYes = document.getElementById('confirmYes');
+const confirmNo = document.getElementById('confirmNo');
+
+if (saved) {
+  window.progress = saved.progress;
+  gameState.currentRound = saved.round;
+  continueBtn.style.display = 'inline-block';
+  startBtn.textContent = 'Restart';
+} else {
+  continueBtn.style.display = 'none';
+  startBtn.textContent = 'Start';
+}
+
+// Continue existing game, straight to maingame
+continueBtn.addEventListener('click', () => {
+  intro.classList.remove('active');
+  mainGame.style.display = 'block';
+  startGame('easy');
+});
+
+// Restart confirmation
+startBtn.addEventListener('click', () => {
+  const hasSave = localStorage.getItem('goVizProgress');
+  if (hasSave) {
+    confirmModal.classList.add('active');
+  } else {
+    localStorage.removeItem('goVizProgress');
+    window.progress = { easy: { level: 1 }, hard: { level: 10 } };
+    gameState.currentRound = 1;
+    showScreen(difficulty, intro);
+  }
+});
+
+confirmYes.addEventListener('click', () => {
+  confirmModal.classList.remove('active');
+  localStorage.removeItem('goVizProgress');
+  window.progress = { easy: { level: 1 }, hard: { level: 10 } };
+  gameState.currentRound = 1;
+  showScreen(difficulty, intro);
+});
+
+confirmNo.addEventListener('click', () => {
+  confirmModal.classList.remove('active');
+});
+
 // ---------- Utility ----------
 function showScreen(show, hide) {
   hide.classList.remove('active');
@@ -43,9 +94,6 @@ function showScreen(show, hide) {
 
 intro.classList.add('active');
 
-document.getElementById('trainBtn').onclick = () => {
-  showScreen(difficulty, intro);
-};
 document.getElementById('homeBtn').onclick = () => {
   showScreen(intro, difficulty);
 };
@@ -333,6 +381,15 @@ async function startGame(mode, retry = false) {
         levelIncreased = true;
       }
     }
+
+    // Save progress locally
+    localStorage.setItem(
+      'goVizProgress',
+      JSON.stringify({
+        progress: window.progress,
+        round: gameState.currentRound,
+      })
+    );
 
     const feedback = document.getElementById('feedback');
     const msg = document.getElementById('feedbackMsg');
