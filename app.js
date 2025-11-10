@@ -1,3 +1,5 @@
+import { launchConfetti } from './anim.js';
+
 const intro = document.getElementById('intro');
 const difficulty = document.getElementById('difficulty');
 const mainGame = document.getElementById('mainGame');
@@ -18,7 +20,7 @@ const gameState = {
   levels: [],
 };
 
-const base = { stones: 5, board: 4, time: 5 };
+const base = { stones: 5, board: 4, time: 20 };
 
 for (let i = 1; i <= 50; i++) {
   const boardSize = base.board + Math.floor((i - 1) / 5);
@@ -56,6 +58,15 @@ document.querySelectorAll('.diffBtn').forEach((b) => {
     mainGame.style.display = 'block';
     startGame(currentMode);
   };
+});
+
+// ---------- About Page Selection ----------
+document.getElementById('aboutBtn').addEventListener('click', () => {
+  showScreen(aboutModal, intro);
+});
+
+document.getElementById('aboutHomeBtn').addEventListener('click', () => {
+  showScreen(intro, aboutModal);
 });
 
 // ---------- SGF Loader ----------
@@ -103,7 +114,10 @@ retryBtn.addEventListener('click', async () => {
   const feedback = document.getElementById('feedback');
   feedback.style.display = 'none';
   feedback.classList.remove('show');
-  if (window.activeGame?.timer) clearInterval(window.activeGame.timer);
+  if (window.activeGame?.timer) {
+    speedMultiplier = 1;
+    clearInterval(window.activeGame.timer);
+  }
   document.getElementById('board').replaceChildren();
   document.querySelectorAll('.marker').forEach((m) => m.remove());
   startGame(window.activeGame.mode, true);
@@ -113,7 +127,10 @@ homeBtn2.addEventListener('click', () => {
   const feedback = document.getElementById('feedback');
   feedback.style.display = 'none';
   feedback.classList.remove('show');
-  if (window.activeGame?.timer) clearInterval(window.activeGame.timer);
+  if (window.activeGame?.timer) {
+    speedMultiplier = 1;
+    clearInterval(window.activeGame.timer);
+  }
   mainGame.style.display = 'none';
   showScreen(intro, difficulty);
 });
@@ -122,7 +139,10 @@ nextBtn.onclick = async () => {
   const feedback = document.getElementById('feedback');
   feedback.classList.remove('show');
   feedback.style.display = 'none';
-  if (window.activeGame?.timer) clearInterval(window.activeGame.timer);
+  if (window.activeGame?.timer) {
+    speedMultiplier = 1;
+    clearInterval(window.activeGame.timer);
+  }
   document.getElementById('board').replaceChildren();
   document.querySelectorAll('.marker').forEach((m) => m.remove());
   await startGame(window.activeGame.mode);
@@ -131,6 +151,9 @@ nextBtn.onclick = async () => {
 // ---------- Main Game ----------
 async function startGame(mode, retry = false) {
   if (!retry) window.activeGame = { mode };
+
+  let speedMultiplier = 1;
+  let lastTap = 0;
 
   const level = window.progress[mode].level;
   const levelConfig = gameState.levels[level - 1] || gameState.levels[0];
@@ -172,7 +195,10 @@ async function startGame(mode, retry = false) {
   const timerBar = document.getElementById('timerBar');
   let timeLeft = config.time;
   toggleInteraction(false);
-  if (window.activeGame?.timer) clearInterval(window.activeGame.timer);
+  if (window.activeGame?.timer) {
+    speedMultiplier = 1;
+    clearInterval(window.activeGame.timer);
+  }
 
   stones.forEach((s) => {
     const inter = document.querySelector(
@@ -182,10 +208,16 @@ async function startGame(mode, retry = false) {
   });
 
   window.activeGame.timer = setInterval(() => {
-    timeLeft -= 0.1;
+    timeLeft -= 0.1 * speedMultiplier;
     timerBar.style.width = (timeLeft / config.time) * 100 + '%';
-    if (timeLeft <= 0) {
+    if (timeLeft <= 0 && window.activeGame.timer) {
+      // guard so it fires once
       clearInterval(window.activeGame.timer);
+      window.activeGame.timer = null;
+      speedMultiplier = 1; // reset here
+      document.body.removeEventListener('touchend', handleDoubleTap);
+      document.body.removeEventListener('dblclick', handleDoubleTap);
+
       clearStones();
       toggleInteraction(true);
       timerContainer.style.display = 'none';
@@ -194,6 +226,25 @@ async function startGame(mode, retry = false) {
   }, config.intervalSpeed);
 
   // ---------- Inner Helpers ----------
+  // Double-tap to skip timer (active only while timer runs)
+  document.body.removeEventListener('touchend', window._handleDoubleTap);
+  document.body.removeEventListener('dblclick', window._handleDoubleTap);
+
+  // store globally so we can remove it next round
+  window._handleDoubleTap = handleDoubleTap;
+
+  function handleDoubleTap() {
+    const now = Date.now();
+    if (now - lastTap < 300 && window.activeGame?.timer) {
+      // temporarily speed things up 5x
+      speedMultiplier = 20;
+    }
+    lastTap = now;
+  }
+
+  document.body.addEventListener('touchend', handleDoubleTap);
+  document.body.addEventListener('dblclick', handleDoubleTap);
+
   function drawBoard(size) {
     for (let i = 0; i <= size; i++) {
       const v = document.createElement('div');
@@ -292,8 +343,21 @@ async function startGame(mode, retry = false) {
     if (levelIncreased) {
       msg.textContent = `Congrats! 🎉 Level ${window.progress[mode].level}!`;
       levelIncreased = false;
+      launchConfetti();
     } else if (allCorrect) {
-      msg.textContent = 'Well done!';
+      const praise = [
+        'Incredible!',
+        'Well done!',
+        'Nice work!',
+        'You crushed it!',
+        'Excellent!',
+        'Beautiful recall!',
+        'Smart move!',
+        'You nailed it!',
+        'Brilliant!',
+        'On fire!',
+      ];
+      msg.textContent = praise[Math.floor(Math.random() * praise.length)];
     } else {
       msg.textContent = 'Missed a few!';
     }
