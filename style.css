@@ -432,6 +432,79 @@ button:disabled {
   color: white;
 }
 
+#gameHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: var(--max-board);
+  margin: 0 auto 10px;
+  padding: 0 4px;
+  font-weight: bold;
+  gap: 30px;
+}
+
+#scoreDisplay {
+  font-size: 1.1em;
+  text-align: left;
+}
+
+#levelInfo {
+  font-size: 1.1em;
+  text-align: right;
+}
+
+#scorePopup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none; /* make it non-interactive */
+  z-index: 10; /* ensure it's above modal content */
+}
+
+.score-float {
+  position: absolute;
+  top: 50%;
+  color: #4caf50;
+  font-size: 1.6em;
+  font-weight: bold;
+  opacity: 1;
+  animation: scoreRise 1s ease-out forwards;
+}
+
+@keyframes scoreRise {
+  0% {
+    transform: translate(-50%, 3vh) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-90%, -50vh) scale(1.4);
+    opacity: 1;
+  }
+  90% {
+    transform: translate(-125%, -75vh) scale(1.6);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-125%, -75vh) scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes scorePulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.4);
+    color: #66bb6a;
+  }
+  100% {
+    transform: scale(1);
+    color: inherit;
+  }
+}
+
 /* ========= Mobile Tweaks ========= */
 @media (max-width: 600px) {
   :root {

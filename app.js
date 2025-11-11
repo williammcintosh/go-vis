@@ -19,6 +19,8 @@ const gameState = {
   totalRounds: 10,
   levels: [],
 };
+gameState.score = gameState.score || 0;
+const SCORE_POINTS = 1000; // easy to edit later
 
 const base = { stones: 5, board: 4, time: 20 };
 
@@ -195,6 +197,26 @@ nextBtn.onclick = async () => {
   document.querySelectorAll('.marker').forEach((m) => m.remove());
   await startGame(window.activeGame.mode);
 };
+
+function addScore(points) {
+  gameState.score += points;
+
+  // delay updating the score until float finishes
+  setTimeout(() => {
+    const scoreEl = document.getElementById('scoreDisplay');
+    scoreEl.textContent = `Score: ${gameState.score}`;
+    scoreEl.style.animation = 'scorePulse 0.5s ease';
+    setTimeout(() => (scoreEl.style.animation = ''), 600); // reset animation
+  }, 1300); // wait until float "lands"
+
+  // create the floating +points
+  const popupContainer = document.getElementById('scorePopup');
+  const float = document.createElement('div');
+  float.className = 'score-float';
+  float.textContent = `+${points}`;
+  popupContainer.appendChild(float);
+  setTimeout(() => float.remove(), 1600);
+}
 
 // ---------- Main Game ----------
 async function startGame(mode, retry = false) {
@@ -415,6 +437,20 @@ async function startGame(mode, retry = false) {
         'On fire!',
       ];
       msg.textContent = praise[Math.floor(Math.random() * praise.length)];
+      // Disable "Next Challenge" during animation
+      const nextBtn = document.getElementById('nextBtn');
+
+      nextBtn.disabled = true;
+
+      // Add score with delay for animation sync
+      if (allCorrect) {
+        setTimeout(() => {
+          addScore(SCORE_POINTS);
+          nextBtn.disabled = false;
+        }, 800);
+      } else {
+        nextBtn.disabled = false;
+      }
     } else {
       msg.textContent = 'Missed a few!';
     }
