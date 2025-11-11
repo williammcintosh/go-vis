@@ -436,7 +436,7 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: var(--main-width);
+  width: var(--main-width);
   font-weight: bold;
   gap: 30px;
   margin: 0;

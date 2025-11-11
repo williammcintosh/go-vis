@@ -53,8 +53,7 @@ if (saved) {
   gameState.score = saved.score || 0; // restore saved score or default to 0
 
   // update the score display on screen
-  const scoreEl = document.getElementById('scoreDisplay');
-  scoreEl.textContent = `Score ${gameState.score}`;
+  document.getElementById('scoreValue').textContent = gameState.score;
 
   continueBtn.style.display = 'inline-block';
   startBtn.textContent = 'Restart';
@@ -233,7 +232,7 @@ function addScore() {
 
   setTimeout(() => {
     const scoreEl = document.getElementById('scoreDisplay');
-    scoreEl.textContent = `Score: ${gameState.score}`;
+    document.getElementById('scoreValue').textContent = gameState.score;
     scoreEl.style.animation = 'scorePulse 0.5s ease';
     setTimeout(() => (scoreEl.style.animation = ''), ANIM_DELAY);
 
