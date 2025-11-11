@@ -431,7 +431,57 @@ async function startGame(mode, retry = false) {
   eyeGlassBonus.addEventListener('click', () => {
     if (eyeGlassBonus.classList.contains('disabled')) return;
     deductPoints(500, eyeGlassBonus);
-    // TODO: add your actual peek effect here
+    eyeGlassBonus.classList.add('disabled'); // stop spam
+
+    // pick an unclicked correct stone
+    const unclicked = stones.filter((s) => {
+      const inter = document.querySelector(
+        `.intersection[data-x="${s.x}"][data-y="${s.y}"]`
+      );
+
+      // figure out what the player currently has
+      const playerHasWhite = inter.classList.contains('white');
+      const playerHasBlack = inter.classList.contains('black');
+
+      // return if player has no stone or the wrong color
+      return (
+        (!playerHasWhite && !playerHasBlack) ||
+        (s.color === 'white' && !playerHasWhite) ||
+        (s.color === 'black' && !playerHasBlack)
+      );
+    });
+
+    if (unclicked.length === 0) {
+      eyeGlassBonus.classList.remove('disabled');
+      return;
+    }
+
+    const randomStone = unclicked[Math.floor(Math.random() * unclicked.length)];
+    const inter = document.querySelector(
+      `.intersection[data-x="${randomStone.x}"][data-y="${randomStone.y}"]`
+    );
+
+    // add a visual hint overlay
+    const hint = document.createElement('div');
+    hint.classList.add('hint-stone', randomStone.color);
+    inter.appendChild(hint);
+
+    // fade in/out animation
+    hint.animate(
+      [
+        { opacity: 0 },
+        { opacity: 1, offset: 0.2 },
+        { opacity: 1, offset: 0.8 },
+        { opacity: 0 },
+      ],
+      { duration: 1200, easing: 'ease-in-out' }
+    );
+
+    // remove it after animation
+    setTimeout(() => {
+      hint.remove();
+      eyeGlassBonus.classList.remove('disabled');
+    }, 1200);
   });
 
   const sgfText =

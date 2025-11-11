@@ -540,6 +540,26 @@ button:disabled {
   animation: scoreRise 0.7s ease-out forwards;
 }
 
+.hint-stone {
+  position: absolute;
+  width: calc(var(--max-board) / var(--board-size));
+  height: calc(var(--max-board) / var(--board-size));
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+}
+.hint-stone.white {
+  background: white;
+  border: 2px solid #ccc;
+}
+.hint-stone.black {
+  background: black;
+}
+
 @keyframes scoreRise {
   0% {
     transform: translate(-50%, 3vh) scale(1);
