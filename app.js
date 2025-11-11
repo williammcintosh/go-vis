@@ -234,7 +234,7 @@ function addScore(points) {
         score: gameState.score,
       })
     );
-  }, 1000); // wait until float "lands"
+  }, 600); // wait until float "lands"
 
   // create the floating +points
   const popupContainer = document.getElementById('scorePopup');
@@ -466,7 +466,7 @@ async function startGame(mode, retry = false) {
           setTimeout(() => {
             addScore(SCORE_POINTS);
             nextBtn.disabled = false;
-          }, 800);
+          }, 600);
         } else {
           // still wait a bit so the animation feels natural
           setTimeout(() => {

@@ -469,16 +469,12 @@ button:disabled {
   font-size: 1.6em;
   font-weight: bold;
   opacity: 1;
-  animation: scoreRise 1s ease-out forwards;
+  animation: scoreRise 0.7s ease-out forwards;
 }
 
 @keyframes scoreRise {
   0% {
     transform: translate(-50%, 3vh) scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: translate(-90%, -50vh) scale(1.4);
     opacity: 1;
   }
   90% {
