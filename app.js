@@ -7,6 +7,11 @@ const aboutModal = document.getElementById('aboutModal');
 let lastFile = null;
 let currentMode = 'easy';
 let isRefilling = false;
+let canUseEyeGlass = false;
+const DOUBLE_TAP_WINDOW = 300;
+const SPEED_BOOST_MULTIPLIER = 20;
+let speedMultiplier = 1;
+let lastTap = 0;
 
 window.progress = window.progress || {
   easy: { level: 1 },
@@ -47,6 +52,32 @@ const startBtn = document.getElementById('startBtn');
 const confirmModal = document.getElementById('confirmModal');
 const confirmYes = document.getElementById('confirmYes');
 const confirmNo = document.getElementById('confirmNo');
+
+function handleDoubleTap(event) {
+  if (!window.activeGame?.timer || isRefilling) return;
+
+  if (event.type === 'dblclick') {
+    speedMultiplier = SPEED_BOOST_MULTIPLIER;
+    return;
+  }
+
+  const now = Date.now();
+  if (now - lastTap < DOUBLE_TAP_WINDOW) {
+    speedMultiplier = SPEED_BOOST_MULTIPLIER;
+  }
+  lastTap = now;
+}
+
+function initDoubleTapListeners() {
+  document.body.addEventListener('touchend', handleDoubleTap);
+  document.body.addEventListener('dblclick', handleDoubleTap);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDoubleTapListeners);
+} else {
+  initDoubleTapListeners();
+}
 
 if (saved) {
   window.progress = saved.progress;
@@ -331,12 +362,22 @@ function deductPoints(cost, sourceElement) {
 function updateBonusAvailability() {
   const addTime = document.getElementById('addTimeBonus');
   const eyeGlass = document.getElementById('eyeGlassBonus');
-  if (gameState.score <= 0) {
-    addTime.classList.add('disabled');
-    eyeGlass.classList.add('disabled');
-  } else {
+
+  if (!addTime || !eyeGlass) return;
+
+  const canAffordBonus = gameState.score >= 500;
+  const timerIsRunning = Boolean(window.activeGame?.timer);
+
+  if (canAffordBonus && !isRefilling && timerIsRunning) {
     addTime.classList.remove('disabled');
+  } else {
+    addTime.classList.add('disabled');
+  }
+
+  if (canAffordBonus && canUseEyeGlass) {
     eyeGlass.classList.remove('disabled');
+  } else {
+    eyeGlass.classList.add('disabled');
   }
 }
 
@@ -347,8 +388,8 @@ async function startGame(mode, retry = false) {
   // Keeps track of whether or not there was a retry
   window.activeGame.isRetry = retry;
 
-  let speedMultiplier = 1;
-  let lastTap = 0;
+  speedMultiplier = 1;
+  lastTap = 0;
 
   const level = window.progress[mode].level;
   const levelConfig = gameState.levels[level - 1] || gameState.levels[0];
@@ -384,8 +425,10 @@ async function startGame(mode, retry = false) {
   const eyeGlassBonus = document.getElementById('eyeGlassBonus');
 
   // At start: timer is active, so eyeGlass disabled
+  canUseEyeGlass = false;
   eyeGlassBonus.classList.add('disabled');
   addTimeBonus.classList.remove('disabled');
+  updateBonusAvailability();
 
   addTimeBonus.addEventListener('click', () => {
     if (
@@ -397,6 +440,7 @@ async function startGame(mode, retry = false) {
     }
     isRefilling = true;
     addTimeBonus.classList.add('disabled');
+    updateBonusAvailability();
     deductPoints(500, addTimeBonus);
 
     const timerBar = document.getElementById('timerBar');
@@ -427,8 +471,6 @@ async function startGame(mode, retry = false) {
               clearInterval(window.activeGame.timer);
               window.activeGame.timer = null;
               speedMultiplier = 1;
-              document.body.removeEventListener('touchend', handleDoubleTap);
-              document.body.removeEventListener('dblclick', handleDoubleTap);
               window.activeGame.timerEndTime = Date.now();
               clearStones();
               toggleInteraction(true);
@@ -438,18 +480,22 @@ async function startGame(mode, retry = false) {
                 'transitionend',
                 () => {
                   isRefilling = false;
+                  updateBonusAvailability();
                 },
                 { once: true }
               );
               setTimeout(() => {
                 timerContainer.classList.add('hidden');
                 checkBtn.classList.add('show');
+                canUseEyeGlass = true;
+                updateBonusAvailability();
               }, 100);
             }
           }, config.intervalSpeed);
 
           isRefilling = false;
           addTimeBonus.classList.remove('disabled'); // re-enable
+          updateBonusAvailability();
         }, holdTime);
       }
     };
@@ -487,7 +533,7 @@ async function startGame(mode, retry = false) {
     });
 
     if (unclicked.length === 0) {
-      eyeGlassBonus.classList.remove('disabled');
+      updateBonusAvailability();
       return;
     }
 
@@ -546,8 +592,6 @@ async function startGame(mode, retry = false) {
       clearInterval(window.activeGame.timer);
       window.activeGame.timer = null;
       speedMultiplier = 1; // reset here
-      document.body.removeEventListener('touchend', handleDoubleTap);
-      document.body.removeEventListener('dblclick', handleDoubleTap);
 
       window.activeGame.timerEndTime = Date.now();
 
@@ -556,40 +600,22 @@ async function startGame(mode, retry = false) {
 
       // disable AddTime / enable EyeGlass
       addTimeBonus.classList.add('disabled');
-      if (!isRefilling) {
-        eyeGlassBonus.classList.remove('disabled');
-      }
+      updateBonusAvailability();
 
       timerBar.style.width = '0%';
       setTimeout(() => {
         timerContainer.classList.add('hidden');
         checkBtn.classList.add('show');
         if (!isRefilling) {
-          eyeGlassBonus.classList.remove('disabled');
+          canUseEyeGlass = true;
+          updateBonusAvailability();
         }
       }, 100);
     }
   }, config.intervalSpeed);
+  updateBonusAvailability();
 
   // ---------- Inner Helpers ----------
-  // Double-tap to skip timer (active only while timer runs)
-  document.body.removeEventListener('touchend', window._handleDoubleTap);
-  document.body.removeEventListener('dblclick', window._handleDoubleTap);
-
-  // store globally so we can remove it next round
-  window._handleDoubleTap = handleDoubleTap;
-
-  function handleDoubleTap() {
-    const now = Date.now();
-    if (now - lastTap < 300 && window.activeGame?.timer) {
-      // temporarily speed things up 5x
-      speedMultiplier = 20;
-    }
-    lastTap = now;
-  }
-
-  document.body.addEventListener('touchend', handleDoubleTap);
-  document.body.addEventListener('dblclick', handleDoubleTap);
 
   function drawBoard(size) {
     for (let i = 0; i <= size; i++) {
