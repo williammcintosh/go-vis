@@ -6,6 +6,7 @@ const mainGame = document.getElementById('mainGame');
 const aboutModal = document.getElementById('aboutModal');
 let lastFile = null;
 let currentMode = 'easy';
+let isRefilling = false;
 
 window.progress = window.progress || {
   easy: { level: 1 },
@@ -231,34 +232,11 @@ function addScore(retryCount = 0) {
   const minPoints = 100;
   const maxPoints = 1000;
 
-  // If UI isn't ready yet, retry a few times
-  if (
-    (!mainGame ||
-      mainGame.style.display === 'none' ||
-      !scoreEl ||
-      !scoreValueEl) &&
-    retryCount < 10
-  ) {
-    setTimeout(() => addScore(retryCount + 1), 100);
-    return;
-  }
-
   let factor =
     1 - Math.min(1, Math.max(0, (reactionTime - base) / (slow - base)));
   const points = Math.floor(minPoints + factor * (maxPoints - minPoints));
 
   gameState.score += points;
-
-  // Guard: stop if mainGame is hidden or DOM not ready
-  if (
-    !mainGame ||
-    mainGame.style.display === 'none' ||
-    !scoreEl ||
-    !scoreValueEl
-  ) {
-    console.warn('addScore skipped – UI not ready');
-    return;
-  }
 
   setTimeout(() => {
     scoreValueEl.textContent = gameState.score;
@@ -287,7 +265,6 @@ function addScore(retryCount = 0) {
 
 // =========== Dynamic Movement ============= //
 function deductPoints(cost, sourceElement) {
-  if (!sourceElement) return; // prevent null error
   const target = document.getElementById('scoreValue');
   const s = sourceElement.getBoundingClientRect();
   const t = target.getBoundingClientRect();
@@ -410,8 +387,6 @@ async function startGame(mode, retry = false) {
   eyeGlassBonus.classList.add('disabled');
   addTimeBonus.classList.remove('disabled');
 
-  let isRefilling = false;
-
   addTimeBonus.addEventListener('click', () => {
     if (
       addTimeBonus.classList.contains('disabled') ||
@@ -458,8 +433,14 @@ async function startGame(mode, retry = false) {
               clearStones();
               toggleInteraction(true);
               addTimeBonus.classList.add('disabled');
-              eyeGlassBonus.classList.remove('disabled');
               timerBar.style.width = '0%';
+              timerBar.addEventListener(
+                'transitionend',
+                () => {
+                  isRefilling = false;
+                },
+                { once: true }
+              );
               setTimeout(() => {
                 timerContainer.classList.add('hidden');
                 checkBtn.classList.add('show');
@@ -530,12 +511,6 @@ async function startGame(mode, retry = false) {
       ],
       { duration: 1200, easing: 'ease-in-out' }
     );
-
-    // remove it after animation
-    setTimeout(() => {
-      hint.remove();
-      eyeGlassBonus.classList.remove('disabled');
-    }, 1200);
   });
 
   const sgfText =
@@ -566,7 +541,7 @@ async function startGame(mode, retry = false) {
   window.activeGame.timer = setInterval(() => {
     timeLeft -= 0.1 * speedMultiplier;
     timerBar.style.width = (timeLeft / config.time) * 100 + '%';
-    if (timeLeft <= 0 && window.activeGame.timer) {
+    if (timeLeft <= 0 && window.activeGame.timer && !isRefilling) {
       // guard so it fires once
       clearInterval(window.activeGame.timer);
       window.activeGame.timer = null;
@@ -581,12 +556,17 @@ async function startGame(mode, retry = false) {
 
       // disable AddTime / enable EyeGlass
       addTimeBonus.classList.add('disabled');
-      eyeGlassBonus.classList.remove('disabled');
+      if (!isRefilling) {
+        eyeGlassBonus.classList.remove('disabled');
+      }
 
       timerBar.style.width = '0%';
       setTimeout(() => {
         timerContainer.classList.add('hidden');
         checkBtn.classList.add('show');
+        if (!isRefilling) {
+          eyeGlassBonus.classList.remove('disabled');
+        }
       }, 100);
     }
   }, config.intervalSpeed);
