@@ -55,6 +55,8 @@ if (saved) {
   // update the score display on screen
   document.getElementById('scoreValue').textContent = gameState.score;
 
+  updateBonusAvailability();
+
   continueBtn.style.display = 'inline-block';
   startBtn.textContent = 'Restart';
 } else {
@@ -62,6 +64,7 @@ if (saved) {
   startBtn.textContent = 'Start';
   gameState.score = 0; // ensure score starts at 0 for new games
 }
+updateBonusAvailability();
 
 // Continue existing game, straight to maingame
 continueBtn.addEventListener('click', () => {
@@ -82,7 +85,7 @@ startBtn.addEventListener('click', () => {
 
     // ADD THIS
     gameState.score = 0;
-    document.getElementById('scoreDisplay').textContent = 'Score: 0';
+    document.getElementById('scoreValue').textContent = '0';
 
     showScreen(difficulty, intro);
   }
@@ -96,7 +99,7 @@ confirmYes.addEventListener('click', () => {
 
   // ADD THIS
   gameState.score = 0;
-  document.getElementById('scoreDisplay').textContent = 'Score: 0';
+  document.getElementById('scoreValue').textContent = '0';
 
   showScreen(difficulty, intro);
 });
@@ -216,7 +219,10 @@ nextBtn.onclick = async () => {
   await startGame(window.activeGame.mode);
 };
 
-function addScore() {
+function addScore(retryCount = 0) {
+  const scoreEl = document.getElementById('scoreDisplay');
+  const scoreValueEl = document.getElementById('scoreValue');
+  const mainGame = document.getElementById('mainGame');
   const reactionTime = window.activeGame?.reactionTime || 10000;
 
   // set up scoring curve
@@ -225,18 +231,40 @@ function addScore() {
   const minPoints = 100;
   const maxPoints = 1000;
 
+  // If UI isn't ready yet, retry a few times
+  if (
+    (!mainGame ||
+      mainGame.style.display === 'none' ||
+      !scoreEl ||
+      !scoreValueEl) &&
+    retryCount < 10
+  ) {
+    setTimeout(() => addScore(retryCount + 1), 100);
+    return;
+  }
+
   let factor =
     1 - Math.min(1, Math.max(0, (reactionTime - base) / (slow - base)));
   const points = Math.floor(minPoints + factor * (maxPoints - minPoints));
 
   gameState.score += points;
 
-  const scoreEl = document.getElementById('scoreDisplay');
+  // Guard: stop if mainGame is hidden or DOM not ready
+  if (
+    !mainGame ||
+    mainGame.style.display === 'none' ||
+    !scoreEl ||
+    !scoreValueEl
+  ) {
+    console.warn('addScore skipped – UI not ready');
+    return;
+  }
 
   setTimeout(() => {
-    document.getElementById('scoreValue').textContent = gameState.score;
+    scoreValueEl.textContent = gameState.score;
     scoreEl.style.animation = 'scorePulse 0.5s ease';
     setTimeout(() => (scoreEl.style.animation = ''), ANIM_DELAY);
+    updateBonusAvailability();
 
     localStorage.setItem(
       'goVizProgress',
@@ -259,6 +287,7 @@ function addScore() {
 
 // =========== Dynamic Movement ============= //
 function deductPoints(cost, sourceElement) {
+  if (!sourceElement) return; // prevent null error
   const target = document.getElementById('scoreValue');
   const s = sourceElement.getBoundingClientRect();
   const t = target.getBoundingClientRect();
@@ -309,6 +338,7 @@ function deductPoints(cost, sourceElement) {
     document.getElementById('scoreValue').textContent = gameState.score;
     scoreEl.style.animation = 'scoreDeduct 0.5s ease';
     setTimeout(() => (scoreEl.style.animation = ''), ANIM_DELAY);
+    updateBonusAvailability();
 
     localStorage.setItem(
       'goVizProgress',
@@ -319,6 +349,18 @@ function deductPoints(cost, sourceElement) {
       })
     );
   }, ANIM_DELAY * 1.3);
+}
+
+function updateBonusAvailability() {
+  const addTime = document.getElementById('addTimeBonus');
+  const eyeGlass = document.getElementById('eyeGlassBonus');
+  if (gameState.score <= 0) {
+    addTime.classList.add('disabled');
+    eyeGlass.classList.add('disabled');
+  } else {
+    addTime.classList.remove('disabled');
+    eyeGlass.classList.remove('disabled');
+  }
 }
 
 // ---------- Main Game ----------
@@ -371,7 +413,13 @@ async function startGame(mode, retry = false) {
   let isRefilling = false;
 
   addTimeBonus.addEventListener('click', () => {
-    if (addTimeBonus.classList.contains('disabled') || isRefilling) return;
+    if (
+      addTimeBonus.classList.contains('disabled') ||
+      gameState.score < 500 || // not enough money
+      isRefilling
+    ) {
+      return;
+    }
     isRefilling = true;
     addTimeBonus.classList.add('disabled');
     deductPoints(500, addTimeBonus);
@@ -429,7 +477,13 @@ async function startGame(mode, retry = false) {
   });
 
   eyeGlassBonus.addEventListener('click', () => {
-    if (eyeGlassBonus.classList.contains('disabled')) return;
+    if (
+      gameState.score < 500 ||
+      addTimeBonus.classList.contains('disabled') ||
+      isRefilling
+    ) {
+      return;
+    }
     deductPoints(500, eyeGlassBonus);
     eyeGlassBonus.classList.add('disabled'); // stop spam
 
