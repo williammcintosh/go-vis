@@ -15,7 +15,7 @@
  */
 
 const GoMiniBoardLogic = (() => {
-  const DATA_FILE = 'OGS_mini_boards.json';
+  const DATA_FILE = './games/OGS_mini_boards.json';
   const SIZE_PATTERN = /^(\d+)x\d+$/;
 
   let cachedData = null;
@@ -47,6 +47,31 @@ const GoMiniBoardLogic = (() => {
     const match = SIZE_PATTERN.exec(sizeKey);
     if (!match) return null;
     return Number(match[1]);
+  }
+
+  function countStones(board) {
+    let total = 0;
+    for (const row of board) {
+      for (const stone of row) {
+        if (stone) total += 1;
+      }
+    }
+    return total;
+  }
+
+  function chooseAvailableSizeKey(desiredKey, data) {
+    const availableKeys = Object.keys(data).filter((key) => SIZE_PATTERN.test(key));
+    if (!availableKeys.length) return desiredKey;
+    if (availableKeys.includes(desiredKey)) return desiredKey;
+    const targetSize = parseSizeNumber(desiredKey);
+    const entries = availableKeys
+      .map((key) => ({ key, size: parseSizeNumber(key) }))
+      .filter((entry) => entry.size !== null)
+      .sort((a, b) => a.size - b.size);
+    if (!entries.length) return availableKeys[0];
+    if (targetSize === null) return entries[0].key;
+    const fallback = entries.filter((entry) => entry.size <= targetSize).pop();
+    return fallback?.key ?? entries[0].key;
   }
 
   function sgfToCoords(sgf) {
@@ -175,21 +200,38 @@ const GoMiniBoardLogic = (() => {
    *     where `board` is a 2D array of 'B', 'W', or null and `stoneMap`
    *     maps "x,y" to the occupying color for quick lookups.
    */
-  async function getGameSnapshot({ size = '5x5', gameId = null, moveCount = Infinity } = {}) {
+  async function getGameSnapshot({
+    size = '5x5',
+    gameId = null,
+    moveCount = Infinity,
+    stoneTarget = null,
+  } = {}) {
     const data = await loadMiniBoards();
-    const sizeKey = normalizeSizeKey(size);
+    const desiredKey = normalizeSizeKey(size);
+    const sizeKey = chooseAvailableSizeKey(desiredKey, data);
     const bucket = data[sizeKey];
     if (!bucket || !bucket.length) {
       throw new Error(`No games available for ${sizeKey}`);
     }
     const game = findGame(bucket, gameId);
     const boardSize = parseSizeNumber(sizeKey);
-    const normalizedMoves = normalizeMoveSequence(game.sgf_moves, game.initial_player ?? 'black', boardSize);
-    const limitedMoves = normalizedMoves.slice(0, moveCount);
+    const normalizedMoves = normalizeMoveSequence(
+      game.sgf_moves,
+      game.initial_player ?? 'black',
+      boardSize
+    );
     const board = createBoardMatrix(boardSize);
-    for (const move of limitedMoves) {
+    const limitedMoves = [];
+    let stoneCount = 0;
+    for (const move of normalizedMoves) {
+      if (limitedMoves.length >= moveCount) break;
       board[move.y][move.x] = move.color;
       checkCaptures(board, move.x, move.y, move.color);
+      limitedMoves.push(move);
+      stoneCount = countStones(board);
+      if (stoneTarget !== null && stoneCount === stoneTarget) {
+        break;
+      }
     }
     return {
       sizeKey,
@@ -203,6 +245,7 @@ const GoMiniBoardLogic = (() => {
       moves: limitedMoves,
       board,
       stoneMap: buildStoneMap(board),
+      stoneCount,
     };
   }
 

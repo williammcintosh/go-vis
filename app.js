@@ -208,31 +208,8 @@ document.getElementById('aboutHomeBtn').addEventListener('click', () => {
   showScreen(intro, aboutModal);
 });
 
-// ---------- Game Library ----------
-const GAME_LIBRARY_PATH = './games/OGS_mini_boards.json';
-let cachedGameLibrary = null;
-let gameLibraryPromise = null;
+// ---------- Game Selection Helpers ----------
 const lastGameByBoard = {};
-
-async function loadGameLibrary() {
-  if (cachedGameLibrary) return cachedGameLibrary;
-  if (!gameLibraryPromise) {
-    gameLibraryPromise = fetch(`${GAME_LIBRARY_PATH}?_=${Math.random()}`, {
-      cache: 'no-store',
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to load games (${res.status})`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        cachedGameLibrary = data;
-        return data;
-      });
-  }
-  return gameLibraryPromise;
-}
 
 function determineBoardKey(library, targetSize) {
   if (!library) return null;
@@ -252,26 +229,20 @@ function determineBoardKey(library, targetSize) {
   return `${sizeToUse}x${sizeToUse}`;
 }
 
-async function selectGameForLevel(targetSize, stoneCount) {
-  const library = await loadGameLibrary();
+async function selectGameForLevel(targetSize) {
+  const library = await window.GoMiniBoardLogic.loadMiniBoards();
   const boardKey = determineBoardKey(library, targetSize);
   if (!boardKey || !Array.isArray(library[boardKey])) {
     throw new Error(`No games available for ${targetSize}x${targetSize}`);
   }
   const games = library[boardKey];
-  const candidates = games.filter((game) => game.num_moves >= stoneCount);
-  const pool = candidates.length ? candidates : games;
-  if (!pool.length) {
-    throw new Error(`No games found for ${boardKey}`);
-  }
-  let selected = pool[0];
-  if (pool.length > 1) {
+  let selected = games[0];
+  if (games.length > 1) {
     let attempts = 0;
     do {
-      selected = pool[Math.floor(Math.random() * pool.length)];
+      selected = games[Math.floor(Math.random() * games.length)];
       attempts++;
     } while (
-      pool.length > 1 &&
       selected &&
       selected.game_id === lastGameByBoard[boardKey] &&
       attempts < 10
@@ -279,44 +250,6 @@ async function selectGameForLevel(targetSize, stoneCount) {
   }
   lastGameByBoard[boardKey] = selected?.game_id;
   return { boardKey, game: selected };
-}
-
-function parseSGFMoves(moveSource, limit = 5) {
-  const moves = [];
-  const parseCoords = (coordsRaw) => {
-    if (!coordsRaw) return null;
-    const coords = coordsRaw.toLowerCase();
-    if (coords.length < 2 || coords === '..') return null;
-    const x = coords.charCodeAt(0) - 97;
-    const y = coords.charCodeAt(1) - 97;
-    if (Number.isNaN(x) || Number.isNaN(y)) return null;
-    return { x, y };
-  };
-  const addMove = (colorChar, coordsRaw) => {
-    if (moves.length >= limit) return;
-    const coords = parseCoords(coordsRaw);
-    if (!coords) return;
-    const color = colorChar === 'B' ? 'black' : 'white';
-    moves.push({ x: coords.x, y: coords.y, color });
-  };
-
-  if (Array.isArray(moveSource)) {
-    for (const move of moveSource) {
-      if (moves.length >= limit) break;
-      const match = /([BW])\[([a-zA-Z]{0,2})\]/.exec(move);
-      if (!match) continue;
-      addMove(match[1], match[2]);
-    }
-    return moves;
-  }
-
-  const clean = (moveSource || '').replace(/\s+/g, '');
-  const moveRegex = /[;\(]*([BW])\[(..)\]/gi;
-  let match;
-  while ((match = moveRegex.exec(clean)) !== null && moves.length < limit) {
-    addMove(match[1], match[2]);
-  }
-  return moves;
 }
 
 // ---------- Button Listeners ----------
@@ -768,23 +701,39 @@ async function startGame(mode, retry = false) {
   eyeGlassBonus.addEventListener('click', eyeGlassHandler);
 
   const boardDimension = config.size + 1;
-  let selectedGameInfo = null;
-  if (retry && window.activeGame?.selectedGame) {
-    selectedGameInfo = {
-      boardKey: window.activeGame.boardKey,
-      game: window.activeGame.selectedGame,
+  let snapshot = null;
+  let selectedGame = window.activeGame?.selectedGame;
+  let boardKey = window.activeGame?.boardKey;
+
+  if (retry && window.activeGame?.gameSnapshot) {
+    snapshot = window.activeGame.gameSnapshot;
+    selectedGame = selectedGame ?? window.activeGame.selectedGame;
+    boardKey = boardKey ?? window.activeGame.boardKey;
+  }
+
+  if (!snapshot) {
+    const selection = await selectGameForLevel(boardDimension);
+    boardKey = selection.boardKey;
+    selectedGame = selection.game;
+    snapshot = await window.GoMiniBoardLogic.getGameSnapshot({
+      size: boardKey,
+      gameId: selectedGame.game_id,
+      stoneTarget: config.stoneCount,
+    });
+    window.activeGame.selectedGame = selectedGame;
+    window.activeGame.boardKey = boardKey;
+    window.activeGame.gameSnapshot = snapshot;
+  }
+
+  const stones = Object.entries(snapshot.stoneMap).map(([coords, stoneColor]) => {
+    const [x, y] = coords.split(',').map(Number);
+    return {
+      x,
+      y,
+      color: stoneColor === 'B' ? 'black' : 'white',
     };
-  }
-  if (!selectedGameInfo) {
-    selectedGameInfo = await selectGameForLevel(
-      boardDimension,
-      config.stoneCount
-    );
-  }
-  const { boardKey, game: selectedGame } = selectedGameInfo;
-  window.activeGame.selectedGame = selectedGame;
-  window.activeGame.boardKey = boardKey;
-  const stones = parseSGFMoves(selectedGame.sgf_moves, config.stoneCount);
+  });
+
   drawBoard(config.size);
 
   // Countdown
