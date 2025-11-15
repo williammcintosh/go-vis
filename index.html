@@ -63,14 +63,20 @@
           <div id="timerContainer"><div id="timerBar"></div></div>
           <button id="checkBtn">Check</button>
           <div id="bonusContainer">
-            <div class="bonus" id="addTimeBonus">
-              <img src="images/addTime.png" alt="Add Time" />
-              <p class="cost">-500</p>
-            </div>
-            <div class="bonus" id="eyeGlassBonus">
-              <img src="images/eyeGlass.png" alt="Peek Stones" />
-              <p class="cost">-500</p>
-            </div>
+            <button type="button" class="bonus bonus-button" id="addTimeBonus">
+              <span class="bonus-icon" aria-hidden="true">
+                <img src="images/addTime.png" alt="" />
+              </span>
+              <span class="bonus-label">Add Time</span>
+              <span class="bonus-cost">-500</span>
+            </button>
+            <button type="button" class="bonus bonus-button" id="eyeGlassBonus">
+              <span class="bonus-icon" aria-hidden="true">
+                <img src="images/eyeGlass.png" alt="" />
+              </span>
+              <span class="bonus-label">Peek Stones</span>
+              <span class="bonus-cost">-500</span>
+            </button>
           </div>
           <div id="feedback">
             <p id="feedbackMsg"></p>

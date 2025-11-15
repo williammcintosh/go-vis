@@ -24,6 +24,7 @@ window.progress = window.progress || {
 };
 const ANIM_DELAY = 600;
 const DEDUCT_TARGET_ID = 'scoreValue';
+const BONUS_COST = 500;
 
 // ---------- Dynamic Level Generation ----------
 const gameState = {
@@ -253,6 +254,7 @@ retryBtn.addEventListener('click', async () => {
   const feedback = document.getElementById('feedback');
   feedback.style.display = 'none';
   feedback.classList.remove('show');
+  updateBonusAvailability();
   if (window.activeGame?.timer) {
     speedMultiplier = 1;
     clearInterval(window.activeGame.timer);
@@ -266,6 +268,7 @@ homeBtn2.addEventListener('click', () => {
   const feedback = document.getElementById('feedback');
   feedback.style.display = 'none';
   feedback.classList.remove('show');
+  updateBonusAvailability();
   if (window.activeGame?.timer) {
     speedMultiplier = 1;
     clearInterval(window.activeGame.timer);
@@ -278,6 +281,7 @@ nextBtn.onclick = async () => {
   const feedback = document.getElementById('feedback');
   feedback.classList.remove('show');
   feedback.style.display = 'none';
+  updateBonusAvailability();
   if (window.activeGame?.timer) {
     speedMultiplier = 1;
     clearInterval(window.activeGame.timer);
@@ -451,26 +455,43 @@ function deductPoints(cost, sourceElement) {
   setTimeout(finalizeDeduction, animationDuration + 100);
 }
 
+function flashScoreWarning() {
+  const scoreValueEl = document.getElementById('scoreValue');
+  if (!scoreValueEl) return;
+  scoreValueEl.classList.remove('score-alert');
+  void scoreValueEl.offsetWidth;
+  scoreValueEl.classList.add('score-alert');
+}
+
+function isFeedbackVisible() {
+  const feedback = document.getElementById('feedback');
+  return Boolean(feedback?.classList.contains('show'));
+}
+
+function setBonusState(button, enabled) {
+  if (!button) return;
+  button.classList.toggle('disabled', !enabled);
+  button.setAttribute('aria-disabled', String(!enabled));
+}
+
 function updateBonusAvailability() {
   const addTime = document.getElementById('addTimeBonus');
   const eyeGlass = document.getElementById('eyeGlassBonus');
 
   if (!addTime || !eyeGlass) return;
 
-  const canAffordBonus = gameState.score >= 500;
+  const canAffordBonus = gameState.score >= BONUS_COST;
   const timerIsRunning = Boolean(window.activeGame?.timer);
+  const feedbackActive = isFeedbackVisible();
 
-  if (canAffordBonus && !isRefilling && timerIsRunning) {
-    addTime.classList.remove('disabled');
-  } else {
-    addTime.classList.add('disabled');
-  }
-
-  if (canAffordBonus && canUseEyeGlass) {
-    eyeGlass.classList.remove('disabled');
-  } else {
-    eyeGlass.classList.add('disabled');
-  }
+  setBonusState(
+    addTime,
+    !feedbackActive && canAffordBonus && !isRefilling && timerIsRunning
+  );
+  setBonusState(
+    eyeGlass,
+    !feedbackActive && canAffordBonus && canUseEyeGlass && !isRefilling
+  );
 }
 
 // ---------- Main Game ----------
@@ -519,8 +540,6 @@ async function startGame(mode, retry = false) {
 
   // At start: timer is active, so eyeGlass disabled
   canUseEyeGlass = false;
-  eyeGlassBonus.classList.add('disabled');
-  addTimeBonus.classList.remove('disabled');
   updateBonusAvailability();
 
   if (addTimeHandler) {
@@ -528,17 +547,22 @@ async function startGame(mode, retry = false) {
   }
 
   addTimeHandler = () => {
+    const cannotAfford = gameState.score < BONUS_COST;
     if (
       addTimeBonus.classList.contains('disabled') ||
-      gameState.score < 500 || // not enough money
+      isFeedbackVisible() ||
+      cannotAfford ||
       isRefilling
     ) {
+      if (cannotAfford) {
+        flashScoreWarning();
+      }
       return;
     }
     isRefilling = true;
     addTimeBonus.classList.add('disabled');
     updateBonusAvailability();
-    deductPoints(500, addTimeBonus);
+    deductPoints(BONUS_COST, addTimeBonus);
     tutorialController.onAddTimeUsed();
 
     const timerBar = document.getElementById('timerBar');
@@ -608,10 +632,18 @@ async function startGame(mode, retry = false) {
   }
 
   eyeGlassHandler = () => {
-    if (gameState.score < 500 || !canUseEyeGlass || isRefilling) {
+    const cannotAfford = gameState.score < BONUS_COST;
+    if (cannotAfford) {
+      flashScoreWarning();
       return;
     }
-    deductPoints(500, eyeGlassBonus);
+    if (!canUseEyeGlass || isRefilling) {
+      return;
+    }
+    if (isFeedbackVisible()) {
+      return;
+    }
+    deductPoints(BONUS_COST, eyeGlassBonus);
     eyeGlassBonus.classList.add('disabled'); // stop spam
 
     // pick an unclicked correct stone
@@ -837,7 +869,10 @@ async function startGame(mode, retry = false) {
     const msg = document.getElementById('feedbackMsg');
     const nextBtn = document.getElementById('nextBtn');
     feedback.style.display = 'block';
-    requestAnimationFrame(() => feedback.classList.add('show'));
+    requestAnimationFrame(() => {
+      feedback.classList.add('show');
+      updateBonusAvailability();
+    });
 
     if (levelIncreased) {
       msg.textContent = `Congrats! 🎉 Level ${window.progress[mode].level}!`;
