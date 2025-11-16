@@ -29,8 +29,10 @@
       <div id="confirmModal" class="modal">
         <div class="modal-content">
           <p>This will erase your current progress. Are you sure?</p>
-          <button id="confirmYes">Yes, restart</button>
-          <button id="confirmNo">Cancel</button>
+          <div class="modal-buttons">
+            <button id="confirmNo">Cancel</button>
+            <button id="confirmYes">Yes, restart</button>
+          </div>
         </div>
       </div>
 
@@ -41,8 +43,26 @@
         <p class="subtitle">Choose a mode</p>
         </div>
         <div class="btn-col">
-          <button class="diffBtn" data-mode="position">Position</button>
-          <button class="diffBtn" data-mode="sequence">Sequence</button>
+          <div class="mode-grid">
+            <div class="mode-card mode-card--horizontal" id="position-card">
+              <div class="mode-icon">
+                <img src="images/position.png" alt="Position mode" />
+              </div>
+              <div class="mode-content">
+                <button class="diffBtn" data-mode="position">Position</button>
+                <p class="mode-status" id="mode-status-position">Beginner</p>
+              </div>
+            </div>
+            <div class="mode-card mode-card--horizontal" id="sequence-card">
+              <div class="mode-icon">
+                <img src="images/sequence.png" alt="Sequence mode" />
+              </div>
+              <div class="mode-content">
+                <button class="diffBtn" data-mode="sequence">Sequence</button>
+                <p class="mode-status" id="mode-status-sequence">Advanced</p>
+              </div>
+            </div>
+          </div>
           <button id="homeBtn">Home</button>
         </div>
       </div>

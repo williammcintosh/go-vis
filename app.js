@@ -18,12 +18,16 @@ let eyeGlassHandler = null;
 const tutorialController = createTutorialController();
 
 const DEFAULT_PROGRESS = {
-  position: { level: 1 },
-  sequence: { level: 1 },
+  position: { level: 1, round: 1, started: false },
+  sequence: { level: 1, round: 1, started: false },
 };
 const MODE_INTERVAL_SPEED = {
   position: 40,
   sequence: 45,
+};
+const MODE_TAGLINES = {
+  position: 'Beginner',
+  sequence: 'Advanced',
 };
 
 function normalizeProgress(progress = {}) {
@@ -33,12 +37,28 @@ function normalizeProgress(progress = {}) {
         progress.position?.level ??
         progress.easy?.level ??
         DEFAULT_PROGRESS.position.level,
+      round:
+        progress.position?.round ??
+        progress.easy?.round ??
+        DEFAULT_PROGRESS.position.round,
+      started:
+        progress.position?.started ??
+        progress.easy?.started ??
+        DEFAULT_PROGRESS.position.started,
     },
     sequence: {
       level:
         progress.sequence?.level ??
         progress.hard?.level ??
         DEFAULT_PROGRESS.sequence.level,
+      round:
+        progress.sequence?.round ??
+        progress.hard?.round ??
+        DEFAULT_PROGRESS.sequence.round,
+      started:
+        progress.sequence?.started ??
+        progress.hard?.started ??
+        DEFAULT_PROGRESS.sequence.started,
     },
   };
 }
@@ -91,6 +111,25 @@ function persistProgress() {
       score: gameState.score,
     })
   );
+}
+
+function getSavedProgressState() {
+  return JSON.parse(localStorage.getItem('goVizProgress') || 'null');
+}
+
+function updateModeStatuses() {
+  const savedState = getSavedProgressState();
+  const round = savedState?.round ?? gameState.currentRound ?? 1;
+  Object.keys(MODE_TAGLINES).forEach((mode) => {
+    const el = document.getElementById(`mode-status-${mode}`);
+    if (!el) return;
+    const progress = window.progress[mode];
+    if (progress?.started) {
+      el.textContent = `Level ${progress.level} • Round ${round}`;
+    } else {
+      el.textContent = MODE_TAGLINES[mode];
+    }
+  });
 }
 
 function calculateSpeedBonus(reactionTime = REACTION_TIME_SLOW) {
@@ -313,6 +352,9 @@ confirmNo.addEventListener('click', () => {
 
 // ---------- Utility ----------
 function showScreen(show, hide) {
+  if (show === difficulty) {
+    updateModeStatuses();
+  }
   hide.classList.remove('active');
   show.classList.add('active');
 }
@@ -575,6 +617,10 @@ async function startGame(mode, retry = false) {
 
   // Keeps track of whether or not there was a retry
   window.activeGame.isRetry = retry;
+  if (!window.progress[mode].started) {
+    window.progress[mode].started = true;
+    persistProgress();
+  }
   window.activeGame.sequenceHistory = [];
 
   speedMultiplier = 1;
@@ -584,6 +630,7 @@ async function startGame(mode, retry = false) {
   const levelConfig = gameState.levels[level - 1] || gameState.levels[0];
   const currentLevel = window.progress[mode].level;
   gameState.currentLevel = currentLevel || 1;
+  gameState.currentRound = window.progress[mode].round || 1;
 
   document.getElementById(
     'levelText'
@@ -1131,6 +1178,8 @@ async function startGame(mode, retry = false) {
         levelIncreased = true;
       }
     }
+
+    window.progress[mode].round = gameState.currentRound;
 
     const feedback = document.getElementById('feedback');
     const msg = document.getElementById('feedbackMsg');
