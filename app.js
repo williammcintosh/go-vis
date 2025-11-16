@@ -29,6 +29,10 @@ const MODE_TAGLINES = {
   position: 'Beginner',
   sequence: 'Advanced',
 };
+const MODE_ICONS = {
+  position: 'images/position_small.png',
+  sequence: 'images/sequence_small.png',
+};
 
 function normalizeProgress(progress = {}) {
   return {
@@ -118,14 +122,12 @@ function getSavedProgressState() {
 }
 
 function updateModeStatuses() {
-  const savedState = getSavedProgressState();
-  const round = savedState?.round ?? gameState.currentRound ?? 1;
   Object.keys(MODE_TAGLINES).forEach((mode) => {
     const el = document.getElementById(`mode-status-${mode}`);
     if (!el) return;
     const progress = window.progress[mode];
     if (progress?.started) {
-      el.textContent = `Level ${progress.level} • Round ${round}`;
+      el.textContent = `Level ${progress.level} • Round ${progress.round}`;
     } else {
       el.textContent = MODE_TAGLINES[mode];
     }
@@ -144,6 +146,15 @@ function calculateSpeedBonus(reactionTime = REACTION_TIME_SLOW) {
       )
     );
   return Math.round(normalized * SPEED_BONUS_MAX);
+}
+
+function updateModeIndicator(mode) {
+  const icon = document.getElementById('modeIndicatorIcon');
+  const text = document.getElementById('modeIndicatorText');
+  if (!icon || !text) return;
+  const label = mode === 'sequence' ? 'Sequence Mode' : 'Position Mode';
+  icon.src = MODE_ICONS[mode] ?? MODE_ICONS.position;
+  text.textContent = label;
 }
 
 function getAwardDuration(amount) {
@@ -639,6 +650,7 @@ async function startGame(mode, retry = false) {
     'roundText'
   ).textContent = `Round ${gameState.currentRound}/${gameState.totalRounds}`;
 
+  updateModeIndicator(mode);
   const config = {
     intervalSpeed: MODE_INTERVAL_SPEED[mode] ?? 40,
     stoneCount: levelConfig.stones,

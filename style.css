@@ -634,6 +634,29 @@ button:not(.bonus-button):disabled {
   line-height: 1;
 }
 
+#modeIndicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: #1b170e;
+}
+
+#modeIndicator img {
+  width: 56px;
+  height: auto;
+  display: block;
+}
+
+#modeIndicatorText {
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
 #scoreDisplay,
 #levelInfo {
   margin: 0;
