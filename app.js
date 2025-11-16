@@ -1339,7 +1339,9 @@ function createTutorialController() {
   async function runSequence() {
     try {
       await delay(1400);
+      if (!active) return;
       setHold(true);
+      if (!active) return;
       await showStep(
         context.board,
         '[1/5] Memorize the locations and colors of these five stones.',
