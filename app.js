@@ -725,14 +725,16 @@ async function startGame(mode, retry = false) {
     window.activeGame.gameSnapshot = snapshot;
   }
 
-  const stones = Object.entries(snapshot.stoneMap).map(([coords, stoneColor]) => {
-    const [x, y] = coords.split(',').map(Number);
-    return {
-      x,
-      y,
-      color: stoneColor === 'B' ? 'black' : 'white',
-    };
-  });
+  const stones = Object.entries(snapshot.stoneMap).map(
+    ([coords, stoneColor]) => {
+      const [x, y] = coords.split(',').map(Number);
+      return {
+        x,
+        y,
+        color: stoneColor === 'B' ? 'black' : 'white',
+      };
+    }
+  );
 
   drawBoard(config.size);
 
@@ -860,6 +862,7 @@ async function startGame(mode, retry = false) {
     document.querySelectorAll('.marker').forEach((m) => m.remove());
     let allCorrect = true;
 
+    let missedCount = 0;
     for (let y = 0; y <= config.size; y++) {
       for (let x = 0; x <= config.size; x++) {
         const inter = document.querySelector(
@@ -881,7 +884,10 @@ async function startGame(mode, retry = false) {
         const marker = document.createElement('div');
         marker.classList.add('marker');
         marker.textContent = correct ? '✅' : '❌';
-        if (!correct) allCorrect = false;
+        if (!correct) {
+          allCorrect = false;
+          missedCount++;
+        }
         inter.appendChild(marker);
       }
     }
@@ -951,7 +957,8 @@ async function startGame(mode, retry = false) {
         }
       }
     } else {
-      msg.textContent = 'Missed a few!';
+      msg.textContent =
+        missedCount === 1 ? 'Missed just one stone!' : 'Missed some stones!';
     }
 
     feedback.classList.add('show-msg');
