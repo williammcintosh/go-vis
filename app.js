@@ -15,6 +15,7 @@ let speedMultiplier = 1;
 let lastTap = 0;
 let addTimeHandler = null;
 let eyeGlassHandler = null;
+let checkButtonShowTimeout = null;
 const tutorialController = createTutorialController();
 
 const DEFAULT_PROGRESS = {
@@ -666,6 +667,10 @@ async function startGame(mode, retry = false) {
   const checkBtn = document.getElementById('checkBtn');
   const timerContainer = document.getElementById('timerContainer');
 
+  if (checkButtonShowTimeout) {
+    clearTimeout(checkButtonShowTimeout);
+    checkButtonShowTimeout = null;
+  }
   checkBtn.classList.remove('show');
   timerContainer.classList.remove('hidden');
   timerContainer.style.visibility = 'visible';
@@ -741,11 +746,15 @@ async function startGame(mode, retry = false) {
                 },
                 { once: true }
               );
-              setTimeout(() => {
+              if (checkButtonShowTimeout) {
+                clearTimeout(checkButtonShowTimeout);
+              }
+              checkButtonShowTimeout = setTimeout(() => {
                 timerContainer.classList.add('hidden');
                 checkBtn.classList.add('show');
                 canUseEyeGlass = true;
                 updateBonusAvailability();
+                checkButtonShowTimeout = null;
               }, 100);
             }
           }, config.intervalSpeed);
@@ -973,13 +982,17 @@ async function startGame(mode, retry = false) {
       updateBonusAvailability();
 
       timerBar.style.width = '0%';
-      setTimeout(() => {
+      if (checkButtonShowTimeout) {
+        clearTimeout(checkButtonShowTimeout);
+      }
+      checkButtonShowTimeout = setTimeout(() => {
         timerContainer.classList.add('hidden');
         checkBtn.classList.add('show');
         if (!isRefilling) {
           canUseEyeGlass = true;
           updateBonusAvailability();
         }
+        checkButtonShowTimeout = null;
       }, 100);
     }
   }, config.intervalSpeed);
