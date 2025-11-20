@@ -119,8 +119,8 @@ const SPEED_BONUS_MAX = 300;
 const SEQUENCE_BONUS = 250;
 const REACTION_TIME_BASE = 4000;
 const REACTION_TIME_SLOW = 10000;
-const SCORE_STEP_DELAY = 8;
-const SCORE_AWARD_PAUSE = 180;
+const SCORE_STEP_DELAY = 2; // base ms between score increments
+const SCORE_AWARD_PAUSE = 90;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -200,7 +200,8 @@ function updateModeIndicator(mode) {
 }
 
 function getAwardDuration(amount) {
-  return Math.max(Math.round((amount * SCORE_STEP_DELAY + 400) * 0.85), 600);
+  // Keep awards snappy even for large amounts
+  return Math.max(Math.round((amount * SCORE_STEP_DELAY + 200) * 0.4), 280);
 }
 
 function showScoreFloat(label, amount, duration = getAwardDuration(amount)) {
@@ -216,16 +217,16 @@ function showScoreFloat(label, amount, duration = getAwardDuration(amount)) {
   document.body.appendChild(float);
   const animation = float.animate(
     [
-      { transform: `translate(${startX}px, ${startY}px)`, opacity: 1 },
+      { transform: `translate(${startX}px, ${startY}px)`, opacity: 0 },
       {
-        transform: `translate(${startX}px, ${startY - 20}px)`,
-        opacity: 0.9,
-        offset: 0.65,
+        transform: `translate(${startX}px, ${startY}px)`,
+        opacity: 1,
+        offset: 0.02,
       },
       {
-        transform: `translate(${startX}px, ${startY - 22}px)`,
-        opacity: 0.25,
-        offset: 0.95,
+        transform: `translate(${startX}px, ${startY - 20}px)`,
+        opacity: 1,
+        offset: 0.98,
       },
       {
         transform: `translate(${startX}px, ${startY - 25}px)`,
@@ -246,8 +247,8 @@ function animateScoreValue(amount, duration = getAwardDuration(amount)) {
   return new Promise((resolve) => {
     const scoreValueEl = document.getElementById('scoreValue');
     const scoreDisplay = document.getElementById('scoreDisplay');
-    let current = gameState.score;
-    const target = current + amount;
+    const start = gameState.score;
+    const target = start + amount;
     if (scoreValueEl) {
       scoreValueEl.animate(
         [
@@ -262,16 +263,22 @@ function animateScoreValue(amount, duration = getAwardDuration(amount)) {
         }
       );
     }
-    const stepDelay = Math.max(4, Math.floor(duration / amount));
-    const timer = setInterval(() => {
-      current += 1;
-      gameState.score = current;
-      if (scoreValueEl) scoreValueEl.textContent = current;
-      if (current >= target) {
-        clearInterval(timer);
+
+    const startTime = performance.now();
+    const tick = (now) => {
+      const elapsed = now - startTime;
+      const ratio = Math.min(1, elapsed / duration);
+      const nextValue = Math.round(start + (target - start) * ratio);
+      gameState.score = nextValue;
+      if (scoreValueEl) scoreValueEl.textContent = nextValue;
+      if (ratio < 1) {
+        requestAnimationFrame(tick);
+      } else {
         resolve();
       }
-    }, SCORE_STEP_DELAY);
+    };
+
+    requestAnimationFrame(tick);
   });
 }
 
