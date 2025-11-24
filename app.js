@@ -1,4 +1,16 @@
 import { launchConfetti } from './anim.js';
+import {
+  updatePlayerRating,
+  calculateExpectedTime,
+  calculateLevelDiff,
+  incrementLevelIfNeeded,
+  pickNextPuzzle,
+  getBoardSizeForLevel,
+  saveDifficultyState,
+  loadDifficultyState,
+  MIN_STONES,
+  computeRatingResult,
+} from './difficulty.js';
 
 const intro = document.getElementById('intro');
 const difficulty = document.getElementById('difficulty');
@@ -43,6 +55,57 @@ const MODE_ICONS = {
 };
 
 const timerUI = createTimerUI();
+let difficultyState = saveDifficultyState(loadDifficultyState());
+let nextPuzzleSuggestion = null;
+const SKILL_DEBUG_KEY = 'skill_rating_debug';
+const MAX_SPEED_BONUS_THRESHOLD = 7000; // ms threshold for max speed bonus
+const SKIP_BUTTON_IDS = ['skipBtn', 'skipButton', 'skipChallengeBtn'];
+function normalizeLatest(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const entries = Object.entries(value).filter(([k]) => !isNaN(Number(k)));
+    if (entries.length) {
+      const latest = entries.sort((a, b) => Number(a[0]) - Number(b[0])).pop();
+      return latest ? latest[1] : null;
+    }
+    return null;
+  }
+  return value ?? null;
+}
+function loadSkillDebugState() {
+  let parsed = null;
+  try {
+    parsed = JSON.parse(localStorage.getItem(SKILL_DEBUG_KEY) || 'null');
+  } catch (_err) {
+    parsed = null;
+  }
+  const level = Number.isFinite(parsed?.level) ? parsed.level : 1;
+  return {
+    allowRatingChange: parsed?.allowRatingChange ?? false,
+    gameplayLevel: level,
+    completed: Boolean(normalizeLatest(parsed?.completed)),
+    usedSpeedBoost: Boolean(normalizeLatest(parsed?.usedSpeedBoost)),
+    maxSpeedBonusAchieved: Boolean(normalizeLatest(parsed?.maxSpeedBonusAchieved)),
+    actualSeconds: Number(normalizeLatest(parsed?.actualSeconds)),
+    expectedTime: parsed?.expectedTime ?? null,
+    delta: parsed?.delta ?? null,
+    currentRating: parsed?.currentRating ?? null,
+    recordedAt: parsed?.recordedAt ?? null,
+    level,
+  };
+}
+const skillRatingEl = (() => {
+  const existing = document.getElementById('skillRatingText');
+  if (existing) return existing;
+  const levelInfo = document.getElementById('levelInfo');
+  if (!levelInfo) return null;
+  const span = document.createElement('span');
+  span.id = 'skillRatingText';
+  span.textContent = 'Skill Rating: --';
+  levelInfo.appendChild(document.createElement('br'));
+  levelInfo.appendChild(span);
+  return span;
+})();
+renderSkillRating(difficultyState.rating);
 
 function createTimerUI() {
   const container = document.getElementById('timerContainer');
@@ -74,6 +137,138 @@ function createTimerUI() {
   };
 
   return { container, bar, checkBtn, setProgress, showTimer, showCheck, reset };
+}
+
+function renderSkillRating(rating) {
+  if (!skillRatingEl) return;
+  const incoming = Number(rating);
+  const fallback = Number(difficultyState?.rating);
+  const value = Number.isFinite(incoming)
+    ? incoming
+    : Number.isFinite(fallback)
+    ? fallback
+    : 0;
+  skillRatingEl.textContent = `Skill Rating: ${Math.round(value)}`;
+}
+
+function logSkillRatingDebug(data) {
+  console.log('[SkillRating]', JSON.stringify(data, null, 2));
+}
+
+function freezeBarState(reason, timeLeft, totalTime) {
+  if (!window.activeGame || window.activeGame.initialRemainingRatio !== null) {
+    return;
+  }
+  if (reason === 'timerCrossZero') return;
+  const safeTotal =
+    Number(totalTime) ||
+    Number(window.activeGame?.totalTime) ||
+    Number(window.activeGame?.puzzleConfig?.time) ||
+    1;
+  const ratioRaw = safeTotal ? timeLeft / safeTotal : 0;
+  const ratio = Math.max(0, Math.min(1, ratioRaw));
+  console.log('[RATIO CALC]', {
+    timeLeft,
+    totalTime: safeTotal,
+    computedRatio: ratio,
+    reason,
+  });
+  const now = Date.now();
+  window.activeGame.initialRemainingRatio = ratio;
+  window.activeGame.barRatioAtHide = ratio;
+  window.activeGame.timeLeftAtHide = timeLeft;
+  window.activeGame.startTimestampSolve = now;
+  window.activeGame.timeLeftAtSolveStart = timeLeft;
+  window.activeGame.freezeReason = reason;
+  window.activeGame.speedBonusUsed = Boolean(speedMultiplier > 1);
+}
+
+function freezeBarStateNextFrame(reason, timeLeftRef, totalTime) {
+  if (!window.activeGame || window.activeGame.initialRemainingRatio !== null) {
+    return;
+  }
+  requestAnimationFrame(() => {
+    if (!window.activeGame || window.activeGame.initialRemainingRatio !== null) {
+      return;
+    }
+    const currentTimeLeft =
+      window.activeGame.timeLeft ??
+      timeLeftRef ??
+      window.activeGame?.puzzleConfig?.time ??
+      0;
+    const total =
+      Number(totalTime) ||
+      Number(window.activeGame?.totalTime) ||
+      Number(window.activeGame?.puzzleConfig?.time) ||
+      1;
+    freezeBarState(reason, currentTimeLeft, total);
+  });
+}
+
+function showRatingGain(amount) {
+  const target = skillRatingEl || document.body;
+  if (!target) return;
+  const rect = target.getBoundingClientRect();
+  const baseY = rect.top + rect.height * 0.8;
+  const float = document.createElement('div');
+  float.className = 'score-float rating-float';
+  float.textContent = amount > 0 ? `+${amount}` : `${amount}`;
+  float.style.transform = `translate(${rect.left + rect.width / 2}px, ${baseY}px)`;
+  document.body.appendChild(float);
+  float
+    .animate(
+      [
+        { opacity: 0, transform: `${float.style.transform} scale(0.95)` },
+        { opacity: 1, transform: `${float.style.transform} scale(1.08)` },
+        { opacity: 0, transform: `${float.style.transform} translateY(-10px)` },
+      ],
+      {
+        duration: amount > 1 ? 950 : 750,
+        easing: 'ease-out',
+        fill: 'forwards',
+      }
+    )
+    .finished.finally(() => float.remove());
+}
+
+function writeSkillDebug(snapshot, level) {
+  const state = loadSkillDebugState();
+  const targetLevel = Number(level) || state.level || 1;
+  state.level = targetLevel;
+  state.allowRatingChange = snapshot.allowRatingChange;
+  state.gameplayLevel = snapshot.gameplayLevel;
+  state.expectedTime = snapshot.expectedTime;
+  state.delta = snapshot.delta;
+  state.currentRating = snapshot.currentRating;
+  state.stoneCount = snapshot.stoneCount;
+  state.boardSize = snapshot.boardSize;
+  state.completed = snapshot.completed;
+  state.usedSpeedBoost = snapshot.usedSpeedBoost;
+  state.maxSpeedBonusAchieved = snapshot.maxSpeedBonusAchieved;
+  state.actualSeconds = snapshot.actualSeconds;
+  state.recordedAt = Date.now();
+  try {
+    localStorage.setItem(SKILL_DEBUG_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.warn('Failed to write skill debug info', err);
+  }
+}
+
+function showTimerToast(text) {
+  const host = timerUI.container || document.body;
+  if (!host) return;
+  const toast = document.createElement('div');
+  toast.className = 'timer-toast';
+  toast.textContent = text;
+  host.appendChild(toast);
+  toast.animate(
+    [
+      { opacity: 0, transform: 'translate(-50%, 6px)' },
+      { opacity: 1, transform: 'translate(-50%, 0)' },
+      { opacity: 0, transform: 'translate(-50%, -6px)' },
+    ],
+    { duration: 1200, easing: 'ease-out', fill: 'forwards' }
+  ).finished.finally(() => toast.remove());
 }
 
 function loadTapMode() {
@@ -352,6 +547,12 @@ function handleDoubleTap(event) {
 
   if (event.type === 'dblclick') {
     speedMultiplier = SPEED_BOOST_MULTIPLIER;
+    if (window.activeGame) window.activeGame.speedBoostUsed = true;
+    freezeBarStateNextFrame(
+      'postDoubleTapFrame',
+      window.activeGame?.timeLeft ?? window.activeGame?.puzzleConfig?.time ?? 0,
+      window.activeGame?.totalTime || window.activeGame?.puzzleConfig?.time || 1
+    );
     return;
   }
 
@@ -362,6 +563,12 @@ function handleDoubleTap(event) {
       event.preventDefault();
     }
     speedMultiplier = SPEED_BOOST_MULTIPLIER;
+    if (window.activeGame) window.activeGame.speedBoostUsed = true;
+    freezeBarStateNextFrame(
+      'postDoubleTapFrame',
+      window.activeGame?.timeLeft ?? window.activeGame?.puzzleConfig?.time ?? 0,
+      window.activeGame?.totalTime || window.activeGame?.puzzleConfig?.time || 1
+    );
   }
   lastTap = now;
 }
@@ -415,6 +622,10 @@ startBtn.addEventListener('click', () => {
     confirmModal.classList.add('active');
   } else {
     localStorage.removeItem('goVizProgress');
+    localStorage.removeItem('skill_rating');
+    localStorage.removeItem('skill_progress');
+    difficultyState = saveDifficultyState({ rating: 0, level: 1 });
+    renderSkillRating(difficultyState.rating);
     window.progress = normalizeProgress();
     gameState.currentRound = 1;
 
@@ -431,6 +642,10 @@ startBtn.addEventListener('click', () => {
 confirmYes.addEventListener('click', () => {
   confirmModal.classList.remove('active');
   localStorage.removeItem('goVizProgress');
+  localStorage.removeItem('skill_rating');
+  localStorage.removeItem('skill_progress');
+  difficultyState = saveDifficultyState({ rating: 0, level: 1 });
+  renderSkillRating(difficultyState.rating);
   window.progress = normalizeProgress();
   gameState.currentRound = 1;
 
@@ -535,6 +750,7 @@ async function selectGameForLevel(targetSize) {
 const nextBtn = document.getElementById('nextBtn');
 const retryBtn = document.getElementById('retryBtn');
 const homeBtn2 = document.getElementById('homeBtn2');
+const levelOkBtn = document.getElementById('levelOkBtn');
 
 retryBtn.addEventListener('click', async () => {
   const feedback = document.getElementById('feedback');
@@ -577,6 +793,12 @@ nextBtn.onclick = async () => {
   await startGame(window.activeGame.mode);
 };
 
+levelOkBtn.onclick = () => {
+  if (nextBtn.disabled) nextBtn.disabled = false;
+  nextBtn.click();
+  levelOkBtn.style.display = 'none';
+};
+
 async function addScore({
   reactionTime = REACTION_TIME_SLOW,
   finalBoardCorrect = false,
@@ -590,6 +812,9 @@ async function addScore({
   const speedBonus = calculateSpeedBonus(reactionTime);
   if (speedBonus) {
     breakdown.push({ label: 'Speed bonus', value: speedBonus });
+    if (speedBonus > 0 && window.activeGame) {
+      window.activeGame.maxSpeedBonusAchieved = true;
+    }
   }
   if (currentMode === 'sequence' && sequenceOrderIssues === 0) {
     breakdown.push({ label: 'Perfect sequence', value: SEQUENCE_BONUS });
@@ -715,7 +940,8 @@ function updateBonusAvailability() {
 
 // ---------- Main Game ----------
 async function startGame(mode, retry = false) {
-  if (!retry) window.activeGame = { mode };
+  if (!retry || !window.activeGame) window.activeGame = { mode };
+  else window.activeGame.mode = mode;
 
   // Keeps track of whether or not there was a retry
   window.activeGame.isRetry = retry;
@@ -738,6 +964,17 @@ async function startGame(mode, retry = false) {
   gameState.currentLevel = currentLevel || 1;
   gameState.currentRound = window.progress[mode].round || 1;
 
+  const plannedPuzzle = retry
+    ? window.activeGame?.puzzleConfig
+    : nextPuzzleSuggestion;
+  if (!retry) {
+    nextPuzzleSuggestion = null;
+  }
+  const playerLevel = difficultyState.level || 1;
+  renderSkillRating(difficultyState.rating);
+  const resolvedBoardSize =
+    plannedPuzzle?.boardSize ?? getBoardSizeForLevel(playerLevel);
+
   document.getElementById(
     'levelText'
   ).textContent = `Level ${gameState.currentLevel}`;
@@ -748,9 +985,200 @@ async function startGame(mode, retry = false) {
   updateModeIndicator(mode);
   const config = {
     intervalSpeed: MODE_INTERVAL_SPEED[mode] ?? 40,
-    stoneCount: levelConfig.stones,
-    size: levelConfig.boardSize,
+    stoneCount: Math.max(
+      MIN_STONES,
+      plannedPuzzle?.stoneCount ?? levelConfig.stones
+    ),
+    size: Math.max(2, (resolvedBoardSize || levelConfig.boardSize) - 1),
     time: levelConfig.time,
+  };
+
+  const boardDimension = config.size + 1;
+  window.activeGame.puzzleConfig = {
+    stoneCount: config.stoneCount,
+    boardSize: boardDimension,
+  };
+  window.activeGame.startingLevel = gameState.currentLevel || 1;
+  window.activeGame.startingRound = gameState.currentRound || 1;
+  window.activeGame.startedAt = Date.now();
+  window.activeGame.timedOut = false;
+  window.activeGame.timerEndTime = null;
+  window.activeGame.difficultyRecorded = false;
+  window.activeGame.speedBoostUsed = false;
+  window.activeGame.speedBonusUsed = false;
+  window.activeGame.maxSpeedBonusAchieved = false;
+  window.activeGame.usedAssistBonus = false;
+  window.activeGame.initialRemainingRatio = null;
+  window.activeGame.startTimestampSolve = null;
+  window.activeGame.timeLeftAtSolveStart = null;
+  window.activeGame.timeLeftAtSolveEnd = null;
+  window.activeGame.timeLeftAtHide = null;
+  window.activeGame.barRatioAtHide = null;
+  window.activeGame.playerSkipped = false;
+  window.activeGame.freezeReason = null;
+  window.activeGame.totalTime = config.time;
+  window.activeGame.challengeCompleted = false;
+
+  let difficultyRecorded = false;
+  const recordDifficultyOutcome = (timedOutOverride) => {
+    if (difficultyRecorded) return null;
+    const stoneCountUsed = Math.max(
+      MIN_STONES,
+      window.activeGame?.puzzleConfig?.stoneCount ?? config.stoneCount
+    );
+    const boardSizeUsed =
+      window.activeGame?.puzzleConfig?.boardSize ?? boardDimension;
+    const startTs = window.activeGame?.startedAt ?? Date.now();
+    const endTs = window.activeGame?.timerEndTime ?? Date.now();
+    const actualSeconds = Math.max(0.001, (endTs - startTs) / 1000);
+    const timedOut =
+      typeof timedOutOverride === 'boolean'
+        ? timedOutOverride
+        : Boolean(window.activeGame?.timedOut);
+    const expectedTime = calculateExpectedTime(stoneCountUsed, boardSizeUsed);
+    const gameplayLevel =
+      window.activeGame?.startingLevel ||
+      window.progress?.[currentMode]?.level ||
+      gameState.currentLevel ||
+      1;
+    const allowRatingChange = true; // rating updates every challenge
+    const safeActualTime = Math.max(0.001, actualSeconds);
+    const playerSkipped = Boolean(window.activeGame?.playerSkipped);
+    const completed = Boolean(window.activeGame?.challengeCompleted);
+    const usedSpeedBoost = Boolean(window.activeGame?.speedBoostUsed);
+    const maxSpeedBonusAchieved = Boolean(
+      window.activeGame?.maxSpeedBonusAchieved
+    );
+    let ratingResult = {
+      rating: difficultyState.rating,
+      expectedTime,
+      performance: expectedTime / safeActualTime,
+      delta: 0,
+      timedOut,
+    };
+
+    let levelAfter = difficultyState.level;
+
+    const preview = computeRatingResult({
+      stoneCount: stoneCountUsed,
+      boardSize: boardSizeUsed,
+      actualTime: safeActualTime,
+      timedOut,
+      usedSpeedBoost,
+      maxSpeedBonusAchieved,
+      currentRating: difficultyState.rating,
+    });
+
+    ratingResult = computeRatingResult({
+      stoneCount: stoneCountUsed,
+      boardSize: boardSizeUsed,
+      actualTime: safeActualTime,
+      timedOut,
+      completed,
+      playerSkipped,
+      usedSpeedBoost,
+      maxSpeedBonusAchieved,
+      usedAssistBonus: Boolean(window.activeGame?.usedAssistBonus),
+      initialRemainingRatio:
+        window.activeGame?.barRatioAtHide ??
+        window.activeGame?.initialRemainingRatio ??
+        0,
+      speedBonusUsed: Boolean(window.activeGame?.speedBonusUsed),
+      currentRating: difficultyState.rating,
+    });
+    ratingResult.rating = ratingResult.nextRating;
+    difficultyState = saveDifficultyState({
+      rating: ratingResult.nextRating,
+      level: difficultyState.level,
+    });
+    const leveled = incrementLevelIfNeeded(ratingResult.nextRating);
+    levelAfter = leveled.level;
+    difficultyState = { rating: ratingResult.nextRating, level: levelAfter };
+
+    const debugPayload = {
+      timerPhase: {
+        barRatioAtHide: window.activeGame?.barRatioAtHide ?? null,
+        timeLeftAtHide: window.activeGame?.timeLeftAtHide ?? null,
+        usedAssistBonus: Boolean(window.activeGame?.usedAssistBonus),
+        usedSpeedBoost: Boolean(window.activeGame?.speedBoostUsed),
+        playerSkipped,
+        computedRatio:
+          window.activeGame?.barRatioAtHide ??
+          (window.activeGame?.timeLeft && config?.time
+            ? Math.max(
+                0,
+                Math.min(1, (window.activeGame.timeLeft || 0) / config.time)
+              )
+            : null),
+        freezeReason: window.activeGame?.freezeReason ?? null,
+      },
+      solvePhase: {
+        startTimestampSolve: window.activeGame?.startTimestampSolve ?? null,
+        endTimestampSolve: window.activeGame?.endTimestampSolve ?? null,
+        solveDuration: window.activeGame?.solveDuration ?? null,
+        maxSpeedBonus: Boolean(window.activeGame?.maxSpeedBonusAchieved),
+        maxSpeedBonusThreshold: MAX_SPEED_BONUS_THRESHOLD,
+        speedBonusUsed: Boolean(window.activeGame?.speedBonusUsed),
+        speedBonusEstimate: calculateSpeedBonus(
+          window.activeGame?.solveDuration || 0
+        ),
+      },
+      rewardPhase: {
+        rewardGiven: ratingResult.delta,
+        rewardRuleTriggered: ratingResult.rewardRuleTriggered,
+        branch: playerSkipped ? 'skip/expedite' : completed ? 'completed' : 'none',
+      },
+      meta: {
+        completed,
+        playerSkipped,
+        totalTime: config.time,
+        timeLeftAtSolveStart: window.activeGame?.timeLeftAtSolveStart ?? null,
+        timeLeftAtSolveEnd: window.activeGame?.timeLeftAtSolveEnd ?? null,
+      },
+    };
+
+    logSkillRatingDebug(debugPayload);
+    writeSkillDebug(
+      {
+        allowRatingChange,
+        gameplayLevel,
+        completed,
+        usedSpeedBoost,
+        maxSpeedBonusAchieved,
+        expectedTime: ratingResult.expectedTime,
+        actualSeconds: safeActualTime,
+        delta: ratingResult.delta,
+        currentRating: ratingResult.currentRating,
+        nextRating: ratingResult.nextRating,
+        remainingRatio: window.activeGame?.initialRemainingRatio ?? 0,
+        rewardRuleTriggered: ratingResult.rewardRuleTriggered,
+        playerSkipped,
+      },
+      levelAfter
+    );
+
+    if (ratingResult.delta > 0) {
+      showRatingGain(ratingResult.delta);
+    }
+
+    renderSkillRating(difficultyState.rating);
+    const targetLevelDiff = ratingResult.rating * 0.02;
+    nextPuzzleSuggestion = pickNextPuzzle({
+      targetLevelDiff,
+      level: difficultyState.level,
+      currentStoneCount: stoneCountUsed,
+      currentBoardSize: boardSizeUsed,
+    });
+    difficultyRecorded = true;
+    if (window.activeGame) {
+      window.activeGame.difficultyRecorded = true;
+    }
+    return {
+      expectedTime,
+      ratingResult,
+      nextPuzzle: nextPuzzleSuggestion,
+      levelAfter,
+    };
   };
 
   const board = document.getElementById('board');
@@ -760,6 +1188,9 @@ async function startGame(mode, retry = false) {
 
   const checkBtn = timerUI.checkBtn;
   const timerContainer = timerUI.container;
+  const skipButton =
+    SKIP_BUTTON_IDS.map((id) => document.getElementById(id)).find(Boolean) ||
+    null;
 
   if (checkButtonShowTimeout) {
     clearTimeout(checkButtonShowTimeout);
@@ -791,11 +1222,13 @@ async function startGame(mode, retry = false) {
       }
       return;
     }
+    window.activeGame.usedAssistBonus = true;
     isRefilling = true;
     addTimeBonus.classList.add('disabled');
     updateBonusAvailability();
     deductPoints(BONUS_COST, addTimeBonus);
     tutorialController.onAddTimeUsed();
+    showTimerToast('Time bonus!');
 
     const duration = 800;
     const holdTime = 600;
@@ -898,6 +1331,7 @@ async function startGame(mode, retry = false) {
     if (isFeedbackVisible()) {
       return;
     }
+    window.activeGame.usedAssistBonus = true;
     deductPoints(BONUS_COST, eyeGlassBonus);
     eyeGlassBonus.classList.add('disabled'); // stop spam
 
@@ -932,7 +1366,6 @@ async function startGame(mode, retry = false) {
 
   eyeGlassBonus.addEventListener('click', eyeGlassHandler);
 
-  const boardDimension = config.size + 1;
   let snapshot = null;
   let selectedGame = window.activeGame?.selectedGame;
   let boardKey = window.activeGame?.boardKey;
@@ -972,7 +1405,37 @@ async function startGame(mode, retry = false) {
 
   // Countdown
   let timeLeft = config.time;
-  const adjustTimeBy = (delta) => {
+  if (window.activeGame) {
+    window.activeGame.timeLeft = timeLeft;
+  }
+  const markPlayerSkipped = () => {
+    if (!window.activeGame) return;
+    window.activeGame.playerSkipped = true;
+    freezeBarStateNextFrame('postHideFrame', timeLeft, config.time);
+    if (window.activeGame.timeLeftAtSolveEnd == null) {
+      window.activeGame.timeLeftAtSolveEnd = timeLeft;
+    }
+    window.activeGame.challengeCompleted = false;
+    logSkillRatingDebug({
+      timerPhase: {
+        barRatioAtHide: window.activeGame.barRatioAtHide,
+        timeLeftAtHide: window.activeGame.timeLeftAtHide,
+        usedAssistBonus: Boolean(window.activeGame.usedAssistBonus),
+        usedSpeedBoost: Boolean(window.activeGame.speedBoostUsed),
+        playerSkipped: true,
+      },
+      solvePhase: {},
+      rewardPhase: {},
+      meta: { completed: false, totalTime: config.time, action: 'skipButton' },
+    });
+    checkAnswers();
+  };
+  if (skipButton) {
+    skipButton.onclick = () => {
+      markPlayerSkipped();
+    };
+  }
+   const adjustTimeBy = (delta) => {
     timeLeft = Math.min(config.time, Math.max(0, timeLeft + delta));
     timerUI.setProgress(timeLeft / config.time);
   };
@@ -989,11 +1452,18 @@ async function startGame(mode, retry = false) {
     }
     speedMultiplier = 1;
     window.activeGame.timerEndTime = Date.now();
+    window.activeGame.timedOut = true;
+    if (window.activeGame && window.activeGame.initialRemainingRatio === null) {
+      freezeBarStateNextFrame('postHideFrame', timeLeft, config.time);
+    }
     clearStones();
     toggleInteraction(true);
     addTimeBonus.classList.add('disabled');
     updateBonusAvailability();
     timerUI.setProgress(0);
+    if (window.activeGame) {
+      window.activeGame.timeLeft = 0;
+    }
     if (checkButtonShowTimeout) {
       clearTimeout(checkButtonShowTimeout);
     }
@@ -1011,9 +1481,15 @@ async function startGame(mode, retry = false) {
     if (tutorialController.shouldHoldTimer()) {
       return;
     }
-    timeLeft -= 0.1 * speedMultiplier;
-    timerUI.setProgress(timeLeft / config.time);
-    tutorialController.onTimerTick(timeLeft / config.time);
+    timeLeft = Math.max(0, timeLeft - 0.1 * speedMultiplier);
+    const ratio = timeLeft / config.time;
+    timerUI.setProgress(ratio);
+    if (window.activeGame) {
+      const clamped = Math.max(0, Math.min(1, ratio));
+      window.activeGame.lastTimerRatio = clamped;
+      window.activeGame.timeLeft = timeLeft;
+    }
+    tutorialController.onTimerTick(ratio);
     if (timeLeft <= 0 && window.activeGame?.timer && !isRefilling) {
       handleTimerFinished();
     }
@@ -1221,9 +1697,24 @@ async function startGame(mode, retry = false) {
   }
 
   function checkAnswers() {
+    if (window.activeGame?.timer) {
+      clearInterval(window.activeGame.timer);
+      window.activeGame.timer = null;
+    }
+    if (window.activeGame) {
+      // Treat manual check as not timed out unless explicitly marked elsewhere
+      window.activeGame.timedOut = false;
+    }
+    if (!window.activeGame.timerEndTime) {
+      window.activeGame.timerEndTime = Date.now();
+    }
+    if (window.activeGame && window.activeGame.initialRemainingRatio === null) {
+      freezeBarState('checkAnswers', timeLeft, config.time);
+    }
     // Record players reaction time
-    window.activeGame.reactionTime =
-      Date.now() - (window.activeGame.timerEndTime || Date.now());
+    const endTs = window.activeGame.timerEndTime || Date.now();
+    const startTs = window.activeGame.startedAt || endTs;
+    window.activeGame.reactionTime = endTs - startTs;
 
     document.querySelectorAll('.marker').forEach((m) => m.remove());
     let allCorrect = true;
@@ -1318,11 +1809,6 @@ async function startGame(mode, retry = false) {
             : move.color;
         return `${color}[${move.x},${move.y}]`;
       };
-      console.log(
-        'Sequence expected:',
-        expectedMoves.map(formatExpected).join(', ')
-      );
-      console.log('Sequence actual:', history.map(formatActual).join(', '));
       window.activeGame.orderMistakes = orderMistakes;
     } else {
       window.activeGame.orderMistakes = new Set();
@@ -1342,9 +1828,10 @@ async function startGame(mode, retry = false) {
 
     window.progress[mode].round = gameState.currentRound;
 
-    const feedback = document.getElementById('feedback');
-    const msg = document.getElementById('feedbackMsg');
-    const nextBtn = document.getElementById('nextBtn');
+  const feedback = document.getElementById('feedback');
+  const msg = document.getElementById('feedbackMsg');
+  const nextBtn = document.getElementById('nextBtn');
+  const okBtn = document.getElementById('levelOkBtn');
     feedback.style.display = 'block';
     requestAnimationFrame(() => {
       feedback.classList.add('show');
@@ -1352,22 +1839,75 @@ async function startGame(mode, retry = false) {
     });
 
     const finalBoardCorrect = missedCount === 0;
+    const playerSkipped = Boolean(window.activeGame?.playerSkipped);
+    const barRatioAtHide =
+      window.activeGame?.barRatioAtHide ??
+      window.activeGame?.initialRemainingRatio ??
+      (timeLeft / config.time);
+    const initialRemainingRatio = barRatioAtHide || 0;
+    let remainingRatio = initialRemainingRatio;
+    if (window.activeGame?.timedOut) remainingRatio = 0;
+
+    const derivedSkipped =
+      playerSkipped ||
+      (Boolean(window.activeGame?.speedBoostUsed) &&
+        initialRemainingRatio > 0.5);
+
+    if (derivedSkipped && finalBoardCorrect && window.activeGame) {
+      window.activeGame.challengeCompleted = false;
+    }
+
+    if (window.activeGame) {
+      window.activeGame.playerSkipped = derivedSkipped;
+      window.activeGame.challengeCompleted = allCorrect && !derivedSkipped;
+      if (window.activeGame.timeLeftAtSolveEnd == null) {
+        window.activeGame.timeLeftAtSolveEnd = timeLeft;
+      }
+      if (window.activeGame.startTimestampSolve == null) {
+        window.activeGame.startTimestampSolve = Date.now();
+      }
+      const endTs = Date.now();
+      window.activeGame.endTimestampSolve = endTs;
+      window.activeGame.solveDuration =
+        window.activeGame?.startTimestampSolve != null
+          ? endTs - window.activeGame.startTimestampSolve
+          : 0;
+      window.activeGame.maxSpeedBonusAchieved =
+        window.activeGame.solveDuration <= MAX_SPEED_BONUS_THRESHOLD;
+      window.activeGame.speedBoostUsed = Boolean(
+        window.activeGame.speedBoostUsed || speedMultiplier > 1
+      );
+      window.activeGame.speedBonusUsed = Boolean(
+        window.activeGame.speedBonusUsed || speedMultiplier > 1
+      );
+    }
+
+    if (derivedSkipped && window.activeGame?.challengeCompleted) {
+      console.warn('[SkillRating] skip and completed both true; forcing skip');
+      window.activeGame.challengeCompleted = false;
+    }
+
+    recordDifficultyOutcome(Boolean(window.activeGame?.timedOut));
 
     if (levelIncreased) {
-      msg.textContent = `Congrats! 🎉 Level ${window.progress[mode].level}!`;
+      msg.textContent = `Level ${window.progress[mode].level} now unlocked!`;
+      nextBtn.disabled = true;
+      if (okBtn) {
+        okBtn.style.display = 'inline-block';
+      }
       levelIncreased = false;
       launchConfetti();
-      nextBtn.disabled = true;
       setTimeout(() => {
         addScore({
           reactionTime: window.activeGame?.reactionTime || 10000,
           finalBoardCorrect,
           sequenceOrderIssues,
-        }).finally(() => {
-          nextBtn.disabled = false;
         });
       }, ANIM_DELAY);
     } else if (allCorrect) {
+      if (okBtn) {
+        okBtn.style.display = 'none';
+      }
       const praise = [
         'Incredible!',
         'Well done!',
@@ -1383,6 +1923,8 @@ async function startGame(mode, retry = false) {
       msg.textContent = praise[Math.floor(Math.random() * praise.length)];
       // Disable "Next Challenge" during animation
       const nextBtn = document.getElementById('nextBtn');
+      const levelOverlayActive = () =>
+        Boolean(document.querySelector('.level-up-overlay'));
 
       // Add score with delay for animation sync
       if (allCorrect) {
@@ -1395,13 +1937,17 @@ async function startGame(mode, retry = false) {
               finalBoardCorrect,
               sequenceOrderIssues,
             }).finally(() => {
-              nextBtn.disabled = false;
+              if (!levelOverlayActive()) {
+                nextBtn.disabled = false;
+              }
             });
           }, ANIM_DELAY);
         } else {
           // still wait a bit so the animation feels natural
           setTimeout(() => {
-            nextBtn.disabled = false;
+            if (!levelOverlayActive()) {
+              nextBtn.disabled = false;
+            }
           }, ANIM_DELAY);
         }
       }
