@@ -432,6 +432,223 @@ function pickNextPuzzle({
   };
 }
 
+function createDifficultyOutcomeRecorder({
+  difficultyState,
+  setDifficultyState,
+  minStones = MIN_STONES,
+  config,
+  boardDimension,
+  skillRatingEl,
+  pickNextPuzzleFn = pickNextPuzzle,
+  incrementLevelIfNeededFn = incrementLevelIfNeeded,
+  computeRatingResultFn = computeRatingResult,
+  calculateExpectedTimeFn = calculateExpectedTime,
+  calculateSpeedBonusFn = () => 0,
+  MAX_SPEED_BONUS_THRESHOLD,
+  logSkillRatingDebug,
+  writeSkillDebug,
+  setNextPuzzleSuggestion,
+  getProgress,
+  gameState,
+  currentMode,
+  activeGame,
+}) {
+  return function recordDifficultyOutcome(timedOutOverride) {
+    if (!activeGame) return null;
+    if (activeGame.difficultyRecorded) return null;
+
+    const stoneCountUsed = Math.max(
+      minStones,
+      activeGame?.puzzleConfig?.stoneCount ?? config?.stoneCount ?? minStones
+    );
+    const boardSizeUsed =
+      activeGame?.puzzleConfig?.boardSize ?? boardDimension ?? 0;
+    const startTs = activeGame?.startedAt ?? Date.now();
+    const endTs = activeGame?.timerEndTime ?? Date.now();
+    const actualSeconds = Math.max(0.001, (endTs - startTs) / 1000);
+    const timedOut =
+      typeof timedOutOverride === 'boolean'
+        ? timedOutOverride
+        : Boolean(activeGame?.timedOut);
+    const expectedTime = calculateExpectedTimeFn(stoneCountUsed, boardSizeUsed);
+    const gameplayLevel =
+      activeGame?.startingLevel ||
+      getProgress?.()?.[currentMode]?.level ||
+      gameState?.currentLevel ||
+      1;
+    const allowRatingChange = true;
+    const safeActualTime = Math.max(0.001, actualSeconds);
+    const playerSkipped = Boolean(activeGame?.playerSkipped);
+    const completed = Boolean(activeGame?.challengeCompleted);
+    const usedSpeedBoost = Boolean(activeGame?.speedBoostUsed);
+    const maxSpeedBonusAchieved = Boolean(activeGame?.maxSpeedBonusAchieved);
+
+    let ratingResult = {
+      rating: difficultyState.rating,
+      expectedTime,
+      performance: expectedTime / safeActualTime,
+      delta: 0,
+      timedOut,
+    };
+
+    let levelAfter = difficultyState.level;
+
+    ratingResult = computeRatingResultFn({
+      stoneCount: stoneCountUsed,
+      boardSize: boardSizeUsed,
+      actualTime: safeActualTime,
+      timedOut,
+      completed,
+      playerSkipped,
+      usedSpeedBoost,
+      maxSpeedBonusAchieved,
+      usedAssistBonus: Boolean(activeGame?.usedAssistBonus),
+      initialRemainingRatio:
+        activeGame?.barRatioAtHide ?? activeGame?.initialRemainingRatio ?? 0,
+      speedBonusUsed: Boolean(activeGame?.speedBonusUsed),
+      currentRating: difficultyState.rating,
+    });
+
+    const attemptsForChallenge = Number(activeGame?.challengeAttempts || 0);
+    const isRetry = attemptsForChallenge > 1;
+    const skipRatio = Math.max(
+      0,
+      Math.min(
+        1,
+        activeGame?.barRatioAtHide ?? activeGame?.initialRemainingRatio ?? 0
+      )
+    );
+    let newDelta = 0;
+    let rewardRuleTriggered = 'notCompleted';
+    if (completed) {
+      if (isRetry) {
+        newDelta = 1;
+        rewardRuleTriggered = 'retry';
+      } else if (skipRatio > 0.75) {
+        if (maxSpeedBonusAchieved) {
+          newDelta = 4;
+          rewardRuleTriggered = 'skip75plusMaxSpeed';
+        } else if (usedSpeedBoost || ratingResult.speedBonusUsed) {
+          newDelta = 3;
+          rewardRuleTriggered = 'skip75plusSpeed';
+        } else {
+          newDelta = 2;
+          rewardRuleTriggered = 'skip75plus';
+        }
+      } else if (skipRatio > 0.5) {
+        newDelta = 2;
+        rewardRuleTriggered = 'skip50plus';
+      } else {
+        newDelta = 1;
+        rewardRuleTriggered = 'completed';
+      }
+    }
+    const currentRatingValue =
+      Number.isFinite(Number(ratingResult.currentRating))
+        ? Number(ratingResult.currentRating)
+        : Number(difficultyState.rating) || 0;
+    ratingResult.delta = newDelta;
+    ratingResult.nextRating = Math.max(
+      0,
+      Math.min(2500, currentRatingValue + newDelta)
+    );
+    ratingResult.rewardRuleTriggered = rewardRuleTriggered;
+    ratingResult.rating = ratingResult.nextRating;
+    const updatedState = saveDifficultyState({
+      rating: ratingResult.nextRating,
+      level: difficultyState.level,
+    });
+    const leveled = incrementLevelIfNeededFn(ratingResult.nextRating);
+    levelAfter = leveled.level;
+    const finalState = { rating: ratingResult.nextRating, level: levelAfter };
+    setDifficultyState?.(finalState);
+
+    const debugPayload = {
+      timerPhase: {
+        barRatioAtHide: activeGame?.barRatioAtHide ?? null,
+        timeLeftAtHide: activeGame?.timeLeftAtHide ?? null,
+        usedAssistBonus: Boolean(activeGame?.usedAssistBonus),
+        usedSpeedBoost: Boolean(activeGame?.usedSpeedBoost),
+        playerSkipped,
+        computedRatio:
+          activeGame?.barRatioAtHide ??
+          (activeGame?.timeLeft && config?.time
+            ? Math.max(
+                0,
+                Math.min(1, (activeGame.timeLeft || 0) / config.time)
+              )
+            : null),
+        freezeReason: activeGame?.freezeReason ?? null,
+      },
+      solvePhase: {
+        startTimestampSolve: activeGame?.startTimestampSolve ?? null,
+        endTimestampSolve: activeGame?.endTimestampSolve ?? null,
+        solveDuration: activeGame?.solveDuration ?? null,
+        maxSpeedBonus: Boolean(activeGame?.maxSpeedBonusAchieved),
+        maxSpeedBonusThreshold: MAX_SPEED_BONUS_THRESHOLD,
+        speedBonusUsed: Boolean(activeGame?.speedBonusUsed),
+        speedBonusEstimate: calculateSpeedBonusFn(
+          activeGame?.solveDuration || 0
+        ),
+      },
+      rewardPhase: {
+        rewardGiven: ratingResult.delta,
+        rewardRuleTriggered: ratingResult.rewardRuleTriggered,
+        branch: playerSkipped ? 'skip/expedite' : completed ? 'completed' : 'none',
+      },
+      meta: {
+        completed,
+        playerSkipped,
+        totalTime: config?.time,
+        timeLeftAtSolveStart: activeGame?.timeLeftAtSolveStart ?? null,
+        timeLeftAtSolveEnd: activeGame?.timeLeftAtSolveEnd ?? null,
+      },
+    };
+
+    logSkillRatingDebug?.(debugPayload);
+    writeSkillDebug?.(
+      {
+        allowRatingChange,
+        gameplayLevel,
+        completed,
+        usedSpeedBoost,
+        maxSpeedBonusAchieved,
+        expectedTime: ratingResult.expectedTime,
+        actualSeconds: safeActualTime,
+        delta: ratingResult.delta,
+        currentRating: ratingResult.currentRating,
+        nextRating: ratingResult.nextRating,
+        remainingRatio: activeGame?.initialRemainingRatio ?? 0,
+        rewardRuleTriggered: ratingResult.rewardRuleTriggered,
+        playerSkipped,
+      },
+      levelAfter
+    );
+
+    if (ratingResult.delta > 0) {
+      showRatingGain(ratingResult.delta, skillRatingEl);
+    }
+
+    renderSkillRating(skillRatingEl, finalState.rating, finalState.rating);
+    const targetLevelDiff = ratingResult.rating * 0.02;
+    const nextPuzzle = pickNextPuzzleFn({
+      targetLevelDiff,
+      level: finalState.level,
+      currentStoneCount: stoneCountUsed,
+      currentBoardSize: boardSizeUsed,
+    });
+    setNextPuzzleSuggestion?.(nextPuzzle);
+    activeGame.difficultyRecorded = true;
+    return {
+      expectedTime,
+      ratingResult,
+      nextPuzzle,
+      levelAfter,
+      difficultyState: finalState,
+    };
+  };
+}
+
 export {
   updatePlayerRating,
   calculateExpectedTime,
@@ -448,4 +665,5 @@ export {
   logSkillRatingDebug,
   showRatingGain,
   writeSkillDebug,
+  createDifficultyOutcomeRecorder,
 };

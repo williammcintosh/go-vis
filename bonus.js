@@ -14,9 +14,13 @@ function initAddTimeBonus({
   getTimeLeft,
   setTimeLeft,
   isFeedbackVisible,
+  getGameState,
+  getActiveGame,
 }) {
   return function addTimeHandler() {
-    const cannotAfford = gameState.score < BONUS_COST;
+    const gameState = getGameState?.();
+    const activeGame = getActiveGame?.();
+    const cannotAfford = (gameState?.score ?? 0) < BONUS_COST;
     if (
       addTimeBonus.classList.contains('disabled') ||
       isFeedbackVisible() ||
@@ -28,7 +32,9 @@ function initAddTimeBonus({
       }
       return;
     }
-    window.activeGame.usedAssistBonus = true;
+    if (activeGame) {
+      activeGame.usedAssistBonus = true;
+    }
     setIsRefilling(true);
     addTimeBonus.classList.add('disabled');
     updateBonusAvailability();
@@ -41,9 +47,9 @@ function initAddTimeBonus({
     const startRatio = getTimeLeft() / config.time;
     const startTime = performance.now();
 
-    if (window.activeGame?.timer) {
-      clearInterval(window.activeGame.timer);
-      window.activeGame.timer = null;
+    if (activeGame?.timer) {
+      clearInterval(activeGame.timer);
+      activeGame.timer = null;
     }
 
     const animateUp = (now) => {
@@ -132,9 +138,11 @@ function initEyeGlassBonus({
   isFeedbackVisible,
   deductPoints,
   updateBonusAvailability,
+  getActiveGame,
 }) {
   return function eyeGlassHandler() {
-    const cannotAfford = gameState.score < BONUS_COST;
+    const activeGame = getActiveGame?.();
+    const cannotAfford = (gameState?.score ?? 0) < BONUS_COST;
     if (cannotAfford) {
       flashScoreWarning();
       return;
@@ -145,12 +153,14 @@ function initEyeGlassBonus({
     if (isFeedbackVisible()) {
       return;
     }
-    window.activeGame.usedAssistBonus = true;
+    if (activeGame) {
+      activeGame.usedAssistBonus = true;
+    }
     deductPoints(BONUS_COST, eyeGlassBonus);
     eyeGlassBonus.classList.add('disabled'); // stop spam
 
-    const moves = window.activeGame?.gameSnapshot?.moves ?? [];
-    const history = window.activeGame?.sequenceHistory ?? [];
+    const moves = activeGame?.gameSnapshot?.moves ?? [];
+    const history = activeGame?.sequenceHistory ?? [];
     const solvedPrefix = (() => {
       let idx = 0;
       while (idx < moves.length && idx < history.length) {
@@ -175,10 +185,79 @@ function initEyeGlassBonus({
       return;
     }
 
-    revealSequenceHints(board, upcomingMoves).finally(() => {
-      // original behavior: nothing else to toggle here
-    });
+    revealSequenceHints(board, upcomingMoves).finally(() => {});
   };
 }
 
-export { initAddTimeBonus, initEyeGlassBonus, revealSequenceHints };
+function initBonusFlow({
+  addTimeBonus,
+  eyeGlassBonus,
+  config,
+  timerUI,
+  startTimerInterval,
+  updateBonusAvailability,
+  deductPoints,
+  tutorialController,
+  showTimerToast,
+  flashScoreWarning,
+  BONUS_COST,
+  getIsRefilling,
+  setIsRefilling,
+  getTimeLeft,
+  setTimeLeft,
+  isFeedbackVisible,
+  board,
+  gameState,
+  getActiveGame,
+  getCanUseEyeGlass,
+  setCanUseEyeGlass,
+}) {
+  const addTimeHandler = initAddTimeBonus({
+    addTimeBonus,
+    config,
+    timerUI,
+    startTimerInterval,
+    updateBonusAvailability,
+    deductPoints,
+    tutorialController,
+    showTimerToast,
+    flashScoreWarning,
+    BONUS_COST,
+    getIsRefilling,
+    setIsRefilling,
+    getTimeLeft,
+    setTimeLeft,
+    isFeedbackVisible,
+    getGameState: () => gameState,
+    getActiveGame,
+  });
+
+  const eyeGlassHandler = initEyeGlassBonus({
+    eyeGlassBonus,
+    board,
+    gameState,
+    BONUS_COST,
+    flashScoreWarning,
+    getCanUseEyeGlass,
+    setCanUseEyeGlass,
+    getIsRefilling,
+    isFeedbackVisible,
+    deductPoints,
+    updateBonusAvailability,
+    getActiveGame,
+  });
+
+  const resetBonusState = () => {
+    setCanUseEyeGlass(false);
+    updateBonusAvailability();
+  };
+
+  return { addTimeHandler, eyeGlassHandler, resetBonusState };
+}
+
+export {
+  initAddTimeBonus,
+  initEyeGlassBonus,
+  revealSequenceHints,
+  initBonusFlow,
+};

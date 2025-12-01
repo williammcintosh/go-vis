@@ -14,6 +14,7 @@ import {
   logSkillRatingDebug,
   showRatingGain,
   writeSkillDebug,
+  createDifficultyOutcomeRecorder,
 } from './difficulty.js';
 import {
   createTimerUI,
@@ -53,6 +54,7 @@ import {
   setBonusState,
   isFeedbackVisible,
   getAwardDuration,
+  calculateSpeedBonus,
 } from './score.js';
 window.updateBonusAvailability = updateBonusAvailability;
 import { createTutorialController } from './tutorial.js';
@@ -61,6 +63,7 @@ import {
   initAddTimeBonus,
   initEyeGlassBonus,
   revealSequenceHints,
+  initBonusFlow,
 } from './bonus.js';
 import {
   determineBoardKey,
@@ -224,16 +227,12 @@ window.ANIM_DELAY = ANIM_DELAY;
 window.BONUS_COST = BONUS_COST;
 const POSITION_BONUS = 200;
 const COLOR_BONUS = 200;
-const SPEED_BONUS_MAX = 300;
 const SEQUENCE_BONUS = 250;
-const REACTION_TIME_BASE = 4000;
-const REACTION_TIME_SLOW = 10000;
 const SCORE_STEP_DELAY = 2; // base ms between score increments
 const SCORE_AWARD_PAUSE = 90;
 window.POSITION_BONUS = POSITION_BONUS;
 window.COLOR_BONUS = COLOR_BONUS;
 window.SEQUENCE_BONUS = SEQUENCE_BONUS;
-window.REACTION_TIME_SLOW = REACTION_TIME_SLOW;
 window.SCORE_STEP_DELAY = SCORE_STEP_DELAY;
 window.SCORE_AWARD_PAUSE = SCORE_AWARD_PAUSE;
 
@@ -354,21 +353,6 @@ function updateModeStatuses() {
     }
   });
 }
-
-function calculateSpeedBonus(reactionTime = REACTION_TIME_SLOW) {
-  const normalized =
-    1 -
-    Math.min(
-      1,
-      Math.max(
-        0,
-        (reactionTime - REACTION_TIME_BASE) /
-          (REACTION_TIME_SLOW - REACTION_TIME_BASE)
-      )
-    );
-  return Math.round(normalized * SPEED_BONUS_MAX);
-}
-window.calculateSpeedBonus = calculateSpeedBonus;
 
 function updateModeIndicator(mode) {
   const icon = document.getElementById('modeIndicatorIcon');
@@ -589,214 +573,6 @@ async function startGame(mode) {
     },
   });
 
-  let difficultyRecorded = false;
-  const recordDifficultyOutcome = (timedOutOverride) => {
-    if (difficultyRecorded) return null;
-    const stoneCountUsed = Math.max(
-      MIN_STONES,
-      window.activeGame?.puzzleConfig?.stoneCount ?? config.stoneCount
-    );
-    const boardSizeUsed =
-      window.activeGame?.puzzleConfig?.boardSize ?? boardDimension;
-    const startTs = window.activeGame?.startedAt ?? Date.now();
-    const endTs = window.activeGame?.timerEndTime ?? Date.now();
-    const actualSeconds = Math.max(0.001, (endTs - startTs) / 1000);
-    const timedOut =
-      typeof timedOutOverride === 'boolean'
-        ? timedOutOverride
-        : Boolean(window.activeGame?.timedOut);
-    const expectedTime = calculateExpectedTime(stoneCountUsed, boardSizeUsed);
-    const gameplayLevel =
-      window.activeGame?.startingLevel ||
-      window.progress?.[currentMode]?.level ||
-      gameState.currentLevel ||
-      1;
-    const allowRatingChange = true; // rating updates every challenge
-    const safeActualTime = Math.max(0.001, actualSeconds);
-    const playerSkipped = Boolean(window.activeGame?.playerSkipped);
-    const completed = Boolean(window.activeGame?.challengeCompleted);
-    const usedSpeedBoost = Boolean(window.activeGame?.speedBoostUsed);
-    const maxSpeedBonusAchieved = Boolean(
-      window.activeGame?.maxSpeedBonusAchieved
-    );
-    let ratingResult = {
-      rating: difficultyState.rating,
-      expectedTime,
-      performance: expectedTime / safeActualTime,
-      delta: 0,
-      timedOut,
-    };
-
-    let levelAfter = difficultyState.level;
-
-    const preview = computeRatingResult({
-      stoneCount: stoneCountUsed,
-      boardSize: boardSizeUsed,
-      actualTime: safeActualTime,
-      timedOut,
-      usedSpeedBoost,
-      maxSpeedBonusAchieved,
-      currentRating: difficultyState.rating,
-    });
-
-    ratingResult = computeRatingResult({
-      stoneCount: stoneCountUsed,
-      boardSize: boardSizeUsed,
-      actualTime: safeActualTime,
-      timedOut,
-      completed,
-      playerSkipped,
-      usedSpeedBoost,
-      maxSpeedBonusAchieved,
-      usedAssistBonus: Boolean(window.activeGame?.usedAssistBonus),
-      initialRemainingRatio:
-        window.activeGame?.barRatioAtHide ??
-        window.activeGame?.initialRemainingRatio ??
-        0,
-      speedBonusUsed: Boolean(window.activeGame?.speedBonusUsed),
-      currentRating: difficultyState.rating,
-    });
-    const attemptsForChallenge = Number(
-      window.activeGame?.challengeAttempts || 0
-    );
-    const isRetry = attemptsForChallenge > 1;
-    const skipRatio = Math.max(
-      0,
-      Math.min(
-        1,
-        window.activeGame?.barRatioAtHide ??
-          window.activeGame?.initialRemainingRatio ??
-          0
-      )
-    );
-    let newDelta = 0;
-    let rewardRuleTriggered = 'notCompleted';
-    if (completed) {
-      if (isRetry) {
-        newDelta = 1;
-        rewardRuleTriggered = 'retry';
-      } else if (skipRatio > 0.75) {
-        if (maxSpeedBonusAchieved) {
-          newDelta = 4;
-          rewardRuleTriggered = 'skip75plusMaxSpeed';
-        } else if (usedSpeedBoost || ratingResult.speedBonusUsed) {
-          newDelta = 3;
-          rewardRuleTriggered = 'skip75plusSpeed';
-        } else {
-          newDelta = 2;
-          rewardRuleTriggered = 'skip75plus';
-        }
-      } else if (skipRatio > 0.5) {
-        newDelta = 2;
-        rewardRuleTriggered = 'skip50plus';
-      } else {
-        newDelta = 1;
-        rewardRuleTriggered = 'completed';
-      }
-    }
-    const currentRatingValue =
-      Number.isFinite(Number(ratingResult.currentRating))
-        ? Number(ratingResult.currentRating)
-        : Number(difficultyState.rating) || 0;
-    ratingResult.delta = newDelta;
-    ratingResult.nextRating = Math.max(0, Math.min(2500, currentRatingValue + newDelta));
-    ratingResult.rewardRuleTriggered = rewardRuleTriggered;
-    ratingResult.rating = ratingResult.nextRating;
-    difficultyState = saveDifficultyState({
-      rating: ratingResult.nextRating,
-      level: difficultyState.level,
-    });
-    const leveled = incrementLevelIfNeeded(ratingResult.nextRating);
-    levelAfter = leveled.level;
-    difficultyState = { rating: ratingResult.nextRating, level: levelAfter };
-
-    const debugPayload = {
-      timerPhase: {
-        barRatioAtHide: window.activeGame?.barRatioAtHide ?? null,
-        timeLeftAtHide: window.activeGame?.timeLeftAtHide ?? null,
-        usedAssistBonus: Boolean(window.activeGame?.usedAssistBonus),
-        usedSpeedBoost: Boolean(window.activeGame?.speedBoostUsed),
-        playerSkipped,
-        computedRatio:
-          window.activeGame?.barRatioAtHide ??
-          (window.activeGame?.timeLeft && config?.time
-            ? Math.max(
-                0,
-                Math.min(1, (window.activeGame.timeLeft || 0) / config.time)
-              )
-            : null),
-        freezeReason: window.activeGame?.freezeReason ?? null,
-      },
-      solvePhase: {
-        startTimestampSolve: window.activeGame?.startTimestampSolve ?? null,
-        endTimestampSolve: window.activeGame?.endTimestampSolve ?? null,
-        solveDuration: window.activeGame?.solveDuration ?? null,
-        maxSpeedBonus: Boolean(window.activeGame?.maxSpeedBonusAchieved),
-        maxSpeedBonusThreshold: MAX_SPEED_BONUS_THRESHOLD,
-        speedBonusUsed: Boolean(window.activeGame?.speedBonusUsed),
-        speedBonusEstimate: calculateSpeedBonus(
-          window.activeGame?.solveDuration || 0
-        ),
-      },
-      rewardPhase: {
-        rewardGiven: ratingResult.delta,
-        rewardRuleTriggered: ratingResult.rewardRuleTriggered,
-        branch: playerSkipped ? 'skip/expedite' : completed ? 'completed' : 'none',
-      },
-      meta: {
-        completed,
-        playerSkipped,
-        totalTime: config.time,
-        timeLeftAtSolveStart: window.activeGame?.timeLeftAtSolveStart ?? null,
-        timeLeftAtSolveEnd: window.activeGame?.timeLeftAtSolveEnd ?? null,
-      },
-    };
-
-    logSkillRatingDebug(debugPayload);
-    writeSkillDebug(
-      {
-        allowRatingChange,
-        gameplayLevel,
-        completed,
-        usedSpeedBoost,
-        maxSpeedBonusAchieved,
-        expectedTime: ratingResult.expectedTime,
-        actualSeconds: safeActualTime,
-        delta: ratingResult.delta,
-        currentRating: ratingResult.currentRating,
-        nextRating: ratingResult.nextRating,
-        remainingRatio: window.activeGame?.initialRemainingRatio ?? 0,
-        rewardRuleTriggered: ratingResult.rewardRuleTriggered,
-        playerSkipped,
-      },
-      levelAfter
-    );
-
-    if (ratingResult.delta > 0) {
-      showRatingGain(ratingResult.delta, skillRatingEl);
-    }
-
-    renderSkillRating(skillRatingEl, difficultyState.rating, difficultyState.rating);
-    const targetLevelDiff = ratingResult.rating * 0.02;
-    nextPuzzleSuggestion = pickNextPuzzle({
-      targetLevelDiff,
-      level: difficultyState.level,
-      currentStoneCount: stoneCountUsed,
-      currentBoardSize: boardSizeUsed,
-    });
-    difficultyRecorded = true;
-    if (window.activeGame) {
-      window.activeGame.difficultyRecorded = true;
-    }
-    return {
-      expectedTime,
-      ratingResult,
-      nextPuzzle: nextPuzzleSuggestion,
-      levelAfter,
-    };
-  };
-  window.recordDifficultyOutcome = recordDifficultyOutcome;
-
   const board = document.getElementById('board');
   resetBoardUI(board, document);
   document.documentElement.style.setProperty('--board-size', config.size);
@@ -847,17 +623,9 @@ async function startGame(mode) {
   });
   timerFlow.prepareTimerStart();
 
-  // At start: timer is active, so eyeGlass disabled
-  canUseEyeGlass = false;
-  window.canUseEyeGlass = canUseEyeGlass;
-  updateBonusAvailability();
-
-  if (addTimeHandler) {
-    addTimeBonus.removeEventListener('click', addTimeHandler);
-  }
-
-  addTimeHandler = initAddTimeBonus({
+  const bonusFlow = initBonusFlow({
     addTimeBonus,
+    eyeGlassBonus,
     config,
     timerUI,
     startTimerInterval,
@@ -877,31 +645,28 @@ async function startGame(mode) {
       timerFlow.setTimeLeft(v);
     },
     isFeedbackVisible,
-  });
-
-  addTimeBonus.addEventListener('click', addTimeHandler);
-
-  if (eyeGlassHandler) {
-    eyeGlassBonus.removeEventListener('click', eyeGlassHandler);
-  }
-
-  eyeGlassHandler = initEyeGlassBonus({
-    eyeGlassBonus,
     board,
     gameState,
-    BONUS_COST,
-    flashScoreWarning,
+    getActiveGame: () => window.activeGame,
     getCanUseEyeGlass: () => canUseEyeGlass,
     setCanUseEyeGlass: (v) => {
       canUseEyeGlass = v;
       window.canUseEyeGlass = v;
     },
-    getIsRefilling: () => isRefilling,
-    isFeedbackVisible,
-    deductPoints,
-    updateBonusAvailability,
   });
 
+  bonusFlow.resetBonusState();
+
+  if (addTimeHandler) {
+    addTimeBonus.removeEventListener('click', addTimeHandler);
+  }
+  addTimeHandler = bonusFlow.addTimeHandler;
+  addTimeBonus.addEventListener('click', addTimeHandler);
+
+  if (eyeGlassHandler) {
+    eyeGlassBonus.removeEventListener('click', eyeGlassHandler);
+  }
+  eyeGlassHandler = bonusFlow.eyeGlassHandler;
   eyeGlassBonus.addEventListener('click', eyeGlassHandler);
 
   const { snapshot, stones } = await preparePuzzleData({
@@ -971,20 +736,41 @@ async function startGame(mode) {
   startTimerInterval();
   updateBonusAvailability();
 
-  // ---------- Inner Helpers ----------
-
-  const paramsForCheckAnswers = {
-    timerUI,
+  const recordDifficultyOutcome = createDifficultyOutcomeRecorder({
+    difficultyState,
+    setDifficultyState: (state) => {
+      difficultyState = state;
+    },
+    minStones: MIN_STONES,
     config,
-    stones,
-    currentMode,
-    speedMultiplier,
+    boardDimension,
+    skillRatingEl,
     MAX_SPEED_BONUS_THRESHOLD,
-    freezeBarState,
-    addScore,
+    calculateSpeedBonusFn: calculateSpeedBonus,
     logSkillRatingDebug,
-  };
+    writeSkillDebug,
+    setNextPuzzleSuggestion: (next) => {
+      nextPuzzleSuggestion = next;
+    },
+    getProgress: () => window.progress,
+    gameState,
+    currentMode,
+    activeGame: window.activeGame,
+  });
+  window.recordDifficultyOutcome = recordDifficultyOutcome;
+
   const handleCheckAnswers = () =>
-    checkAnswers({ ...paramsForCheckAnswers, timeLeft: timerFlow.getTimeLeft() });
+    checkAnswers({
+      timerUI,
+      config,
+      stones,
+      currentMode,
+      speedMultiplier,
+      MAX_SPEED_BONUS_THRESHOLD,
+      freezeBarState,
+      addScore,
+      logSkillRatingDebug,
+      timeLeft: timerFlow.getTimeLeft(),
+    });
   checkBtn.onclick = handleCheckAnswers;
 }

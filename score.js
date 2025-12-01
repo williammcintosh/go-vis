@@ -6,6 +6,24 @@ function getAwardDuration(amount) {
   );
 }
 
+const REACTION_TIME_BASE = 4000;
+const REACTION_TIME_SLOW = 10000;
+const SPEED_BONUS_MAX = 300;
+
+function calculateSpeedBonus(reactionTime = REACTION_TIME_SLOW) {
+  const normalized =
+    1 -
+    Math.min(
+      1,
+      Math.max(
+        0,
+        (reactionTime - REACTION_TIME_BASE) /
+          (REACTION_TIME_SLOW - REACTION_TIME_BASE)
+      )
+    );
+  return Math.round(normalized * SPEED_BONUS_MAX);
+}
+
 function showScoreFloat(label, amount, duration = getAwardDuration(amount)) {
   const scoreValueEl = document.getElementById('scoreValue');
   if (!scoreValueEl) return Promise.resolve();
@@ -85,7 +103,7 @@ function animateScoreValue(amount, duration = getAwardDuration(amount)) {
 }
 
 async function addScore({
-  reactionTime = window.REACTION_TIME_SLOW,
+  reactionTime = REACTION_TIME_SLOW,
   finalBoardCorrect = false,
   sequenceOrderIssues = 0,
 } = {}) {
@@ -94,7 +112,7 @@ async function addScore({
     { label: 'Correct positions', value: window.POSITION_BONUS },
     { label: 'Correct colors', value: window.COLOR_BONUS },
   ];
-  const speedBonus = window.calculateSpeedBonus(reactionTime);
+  const speedBonus = calculateSpeedBonus(reactionTime);
   if (speedBonus) {
     breakdown.push({ label: 'Speed bonus', value: speedBonus });
     if (speedBonus > 0 && window.activeGame) {
@@ -238,4 +256,5 @@ export {
   setBonusState,
   isFeedbackVisible,
   getAwardDuration,
+  calculateSpeedBonus,
 };
