@@ -23,14 +23,44 @@ import {
   runTimerTick,
   setupTimer,
 } from './timer.js';
+import {
+  loadTapMode,
+  setTapMode,
+  getTapMode,
+  syncTapModeInputs,
+  toggleStone,
+  setupInput,
+} from './input.js';
+import {
+  drawBoard,
+  clearStones,
+  renderFinalStones,
+  updateSequenceIntersections,
+  playSequence,
+  getIntersection,
+} from './board.js';
+import {
+  addScore,
+  showScoreFloat,
+  animateScoreValue,
+  deductPoints,
+  flashScoreWarning,
+  updateBonusAvailability,
+  setBonusState,
+  isFeedbackVisible,
+  getAwardDuration,
+} from './score.js';
 
 const intro = document.getElementById('intro');
 const difficulty = document.getElementById('difficulty');
 const mainGame = document.getElementById('mainGame');
 const settingsModal = document.getElementById('settingsModal');
 let currentMode = 'position';
+window.currentMode = currentMode;
 let isRefilling = false;
+window.isRefilling = isRefilling;
 let canUseEyeGlass = false;
+window.canUseEyeGlass = canUseEyeGlass;
 const DOUBLE_TAP_WINDOW = 300;
 const SPEED_BOOST_MULTIPLIER = 20;
 const TUTORIAL_KEY = 'goVizTutorialDone';
@@ -67,6 +97,19 @@ const MODE_ICONS = {
 };
 
 const timerUI = createTimerUI();
+setupInput({
+  TAP_MODE_KEY,
+  TAP_MODES,
+  DOUBLE_TAP_WINDOW,
+  getTapModeValue: () => tapMode,
+  setTapModeValue: (v) => {
+    tapMode = v;
+  },
+  getLastStoneTap: () => lastStoneTap,
+  setLastStoneTap: (v) => {
+    lastStoneTap = v;
+  },
+});
 setupTimer({
   getActiveGame: () => window.activeGame,
   getSpeedMultiplier: () => speedMultiplier,
@@ -204,40 +247,6 @@ function writeSkillDebug(snapshot, level) {
   }
 }
 
-function loadTapMode() {
-  const saved = localStorage.getItem(TAP_MODE_KEY);
-  return saved === TAP_MODES.TOGGLE || saved === TAP_MODES.CLASSIC
-    ? saved
-    : TAP_MODES.CLASSIC;
-}
-
-function setTapMode(mode) {
-  const next =
-    mode === TAP_MODES.TOGGLE || mode === TAP_MODES.CLASSIC
-      ? mode
-      : TAP_MODES.CLASSIC;
-  tapMode = next;
-  localStorage.setItem(TAP_MODE_KEY, next);
-  syncTapModeInputs();
-  if (window.activeGame) {
-    window.activeGame.tapMode = next;
-    if (next === TAP_MODES.TOGGLE && !window.activeGame.lastPlacedColor) {
-      window.activeGame.lastPlacedColor = 'white';
-    }
-  }
-}
-
-function getTapMode() {
-  return tapMode;
-}
-
-function syncTapModeInputs() {
-  const inputs = document.querySelectorAll('input[name="tapMode"]');
-  inputs.forEach((input) => {
-    input.checked = input.value === tapMode;
-  });
-}
-
 function normalizeProgress(progress = {}) {
   return {
     position: {
@@ -275,6 +284,8 @@ window.progress = normalizeProgress(window.progress);
 const ANIM_DELAY = 600;
 const DEDUCT_TARGET_ID = 'scoreValue';
 const BONUS_COST = 500;
+window.ANIM_DELAY = ANIM_DELAY;
+window.BONUS_COST = BONUS_COST;
 const POSITION_BONUS = 200;
 const COLOR_BONUS = 200;
 const SPEED_BONUS_MAX = 300;
@@ -283,8 +294,15 @@ const REACTION_TIME_BASE = 4000;
 const REACTION_TIME_SLOW = 10000;
 const SCORE_STEP_DELAY = 2; // base ms between score increments
 const SCORE_AWARD_PAUSE = 90;
+window.POSITION_BONUS = POSITION_BONUS;
+window.COLOR_BONUS = COLOR_BONUS;
+window.SEQUENCE_BONUS = SEQUENCE_BONUS;
+window.REACTION_TIME_SLOW = REACTION_TIME_SLOW;
+window.SCORE_STEP_DELAY = SCORE_STEP_DELAY;
+window.SCORE_AWARD_PAUSE = SCORE_AWARD_PAUSE;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+window.delay = delay;
 
 // ---------- Dynamic Level Generation ----------
 const gameState = {
@@ -293,6 +311,7 @@ const gameState = {
   totalRounds: 10,
   levels: [],
 };
+window.gameState = gameState;
 gameState.score = gameState.score || 0;
 
 const base = { stones: 5, board: 4, time: 40 };
@@ -320,10 +339,7 @@ function persistProgress() {
     })
   );
 }
-
-function getSavedProgressState() {
-  return JSON.parse(localStorage.getItem('goVizProgress') || 'null');
-}
+window.persistProgress = persistProgress;
 
 const PLAYER_PROGRESS_KEY = 'goVizPlayerProgress';
 const CHALLENGE_ATTEMPTS_KEY = 'goVizChallengeAttempts';
@@ -424,15 +440,6 @@ function recordChallengeAttempt(mode, boardKey, { gameId, index }) {
   return next;
 }
 
-function getChallengeAttemptCount(mode, boardKey, { gameId, index }) {
-  const safeMode = mode === 'sequence' ? 'sequence' : 'position';
-  const bucket = challengeAttempts?.[safeMode] || {};
-  const perBoard = bucket?.[boardKey] || {};
-  const key = getChallengeAttemptKey(gameId, index);
-  const current = Number(perBoard[key]);
-  return Number.isFinite(current) ? current : 0;
-}
-
 function updateModeStatuses() {
   Object.keys(MODE_TAGLINES).forEach((mode) => {
     const el = document.getElementById(`mode-status-${mode}`);
@@ -459,6 +466,7 @@ function calculateSpeedBonus(reactionTime = REACTION_TIME_SLOW) {
     );
   return Math.round(normalized * SPEED_BONUS_MAX);
 }
+window.calculateSpeedBonus = calculateSpeedBonus;
 
 function updateModeIndicator(mode) {
   const icon = document.getElementById('modeIndicatorIcon');
@@ -467,89 +475,6 @@ function updateModeIndicator(mode) {
   const label = mode === 'sequence' ? 'Sequence Mode' : 'Position Mode';
   icon.src = MODE_ICONS[mode] ?? MODE_ICONS.position;
   text.textContent = label;
-}
-
-function getAwardDuration(amount) {
-  // Keep awards snappy even for large amounts
-  return Math.max(Math.round((amount * SCORE_STEP_DELAY + 200) * 0.4), 280);
-}
-
-function showScoreFloat(label, amount, duration = getAwardDuration(amount)) {
-  const scoreValueEl = document.getElementById('scoreValue');
-  if (!scoreValueEl) return Promise.resolve();
-  const startRect = scoreValueEl.getBoundingClientRect();
-  const float = document.createElement('div');
-  float.className = 'score-float';
-  float.textContent = `+${amount}  ${label}`;
-  const startX = startRect.left + startRect.width / 2;
-  const startY = startRect.top - 16;
-  float.style.transform = `translate(${startX}px, ${startY}px)`;
-  document.body.appendChild(float);
-  const animation = float.animate(
-    [
-      { transform: `translate(${startX}px, ${startY}px)`, opacity: 0 },
-      {
-        transform: `translate(${startX}px, ${startY}px)`,
-        opacity: 1,
-        offset: 0.0002,
-      },
-      {
-        transform: `translate(${startX}px, ${startY - 20}px)`,
-        opacity: 1,
-        offset: 0.99,
-      },
-      {
-        transform: `translate(${startX}px, ${startY - 25}px)`,
-        opacity: 0,
-      },
-    ],
-    {
-      duration,
-      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-      fill: 'forwards',
-    }
-  );
-  return animation.finished.then(() => float.remove());
-}
-
-function animateScoreValue(amount, duration = getAwardDuration(amount)) {
-  if (!amount || amount <= 0) return Promise.resolve();
-  return new Promise((resolve) => {
-    const scoreValueEl = document.getElementById('scoreValue');
-    const scoreDisplay = document.getElementById('scoreDisplay');
-    const start = gameState.score;
-    const target = start + amount;
-    if (scoreValueEl) {
-      scoreValueEl.animate(
-        [
-          { transform: 'scale(1)', opacity: 0.9 },
-          { transform: 'scale(1.15)', opacity: 1 },
-          { transform: 'scale(1)', opacity: 0.9 },
-        ],
-        {
-          duration,
-          easing: 'ease-out',
-          fill: 'forwards',
-        }
-      );
-    }
-
-    const startTime = performance.now();
-    const tick = (now) => {
-      const elapsed = now - startTime;
-      const ratio = Math.min(1, elapsed / duration);
-      const nextValue = Math.round(start + (target - start) * ratio);
-      gameState.score = nextValue;
-      if (scoreValueEl) scoreValueEl.textContent = nextValue;
-      if (ratio < 1) {
-        requestAnimationFrame(tick);
-      } else {
-        resolve();
-      }
-    };
-
-    requestAnimationFrame(tick);
-  });
 }
 
 // ---------- Save State ----------
@@ -576,6 +501,7 @@ function refreshHomeButtons() {
   continueBtn.style.display = hasSave ? 'inline-block' : 'none';
   startBtn.textContent = hasSave ? 'Restart' : 'Start';
 }
+window.refreshHomeButtons = refreshHomeButtons;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initDoubleTapListeners);
@@ -677,6 +603,7 @@ document.getElementById('homeBtn').onclick = () => {
 document.querySelectorAll('.diffBtn').forEach((b) => {
   b.onclick = () => {
     currentMode = b.dataset.mode;
+    window.currentMode = currentMode;
     difficulty.classList.remove('active');
     mainGame.style.display = 'block';
     startGame(currentMode);
@@ -792,145 +719,6 @@ levelOkBtn.onclick = () => {
   nextBtn.click();
   levelOkBtn.style.display = 'none';
 };
-
-async function addScore({
-  reactionTime = REACTION_TIME_SLOW,
-  finalBoardCorrect = false,
-  sequenceOrderIssues = 0,
-} = {}) {
-  if (!finalBoardCorrect) return;
-  const breakdown = [
-    { label: 'Correct positions', value: POSITION_BONUS },
-    { label: 'Correct colors', value: COLOR_BONUS },
-  ];
-  const speedBonus = calculateSpeedBonus(reactionTime);
-  if (speedBonus) {
-    breakdown.push({ label: 'Speed bonus', value: speedBonus });
-    if (speedBonus > 0 && window.activeGame) {
-      window.activeGame.maxSpeedBonusAchieved = true;
-    }
-  }
-  if (currentMode === 'sequence' && sequenceOrderIssues === 0) {
-    breakdown.push({ label: 'Perfect sequence', value: SEQUENCE_BONUS });
-  }
-  if (!breakdown.length) return;
-
-  for (const award of breakdown) {
-    const floatPromise = showScoreFloat(award.label, award.value);
-    const scorePromise = animateScoreValue(award.value);
-    await Promise.all([floatPromise, scorePromise]);
-    await delay(SCORE_AWARD_PAUSE);
-  }
-
-  persistProgress();
-  updateBonusAvailability();
-  refreshHomeButtons();
-}
-
-// =========== Dynamic Movement ============= //
-function deductPoints(cost, sourceElement) {
-  const scoreDisplay = document.getElementById('scoreDisplay');
-  const scoreValue = document.getElementById('scoreValue');
-  const startRect = sourceElement.getBoundingClientRect();
-  const endRect = scoreValue.getBoundingClientRect();
-
-  const start = {
-    x: startRect.left + startRect.width / 2,
-    y: startRect.top + startRect.height / 2,
-  };
-
-  const end = {
-    x: endRect.left + endRect.width / 2,
-    y: endRect.top + endRect.height / 2,
-  };
-
-  const float = document.createElement('div');
-  float.className = 'score-float score-float--deduct';
-  float.textContent = `-${cost}`;
-  float.style.transform = `translate(${start.x}px, ${start.y}px) scale(1)`;
-  document.body.appendChild(float);
-
-  const animationDuration = 900;
-  const animation = float.animate(
-    [
-      {
-        transform: `translate(${start.x}px, ${start.y}px) scale(0.9)`,
-        opacity: 0,
-      },
-      {
-        transform: `translate(${start.x}px, ${start.y - 20}px) scale(1.05)`,
-        opacity: 1,
-        offset: 0.2,
-      },
-      {
-        transform: `translate(${end.x}px, ${end.y}px) scale(0.6)`,
-        opacity: 0,
-      },
-    ],
-    {
-      duration: animationDuration,
-      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-      fill: 'forwards',
-    }
-  );
-
-  gameState.score -= cost;
-
-  let settled = false;
-  const finalizeDeduction = () => {
-    if (settled) return;
-    settled = true;
-    float.remove();
-    scoreValue.textContent = gameState.score;
-    scoreDisplay.style.animation = 'scoreDeduct 0.5s ease';
-    setTimeout(() => (scoreDisplay.style.animation = ''), ANIM_DELAY);
-    updateBonusAvailability();
-    persistProgress();
-    refreshHomeButtons();
-  };
-
-  animation.addEventListener('finish', finalizeDeduction);
-  setTimeout(finalizeDeduction, animationDuration + 100);
-}
-
-function flashScoreWarning() {
-  const scoreValueEl = document.getElementById('scoreValue');
-  if (!scoreValueEl) return;
-  scoreValueEl.classList.remove('score-alert');
-  void scoreValueEl.offsetWidth;
-  scoreValueEl.classList.add('score-alert');
-}
-
-function isFeedbackVisible() {
-  const feedback = document.getElementById('feedback');
-  return Boolean(feedback?.classList.contains('show'));
-}
-
-function setBonusState(button, enabled) {
-  if (!button) return;
-  button.classList.toggle('disabled', !enabled);
-  button.setAttribute('aria-disabled', String(!enabled));
-}
-
-function updateBonusAvailability() {
-  const addTime = document.getElementById('addTimeBonus');
-  const eyeGlass = document.getElementById('eyeGlassBonus');
-
-  if (!addTime || !eyeGlass) return;
-
-  const canAffordBonus = gameState.score >= BONUS_COST;
-  const timerIsRunning = Boolean(window.activeGame?.timer);
-  const feedbackActive = isFeedbackVisible();
-
-  setBonusState(
-    addTime,
-    !feedbackActive && canAffordBonus && !isRefilling && timerIsRunning
-  );
-  setBonusState(
-    eyeGlass,
-    !feedbackActive && canAffordBonus && canUseEyeGlass && !isRefilling
-  );
-}
 
 // ---------- Main Game ----------
 async function startGame(mode) {
@@ -1236,6 +1024,7 @@ async function startGame(mode) {
 
   // At start: timer is active, so eyeGlass disabled
   canUseEyeGlass = false;
+  window.canUseEyeGlass = canUseEyeGlass;
   updateBonusAvailability();
 
   if (addTimeHandler) {
@@ -1257,6 +1046,7 @@ async function startGame(mode) {
     }
     window.activeGame.usedAssistBonus = true;
     isRefilling = true;
+    window.isRefilling = isRefilling;
     addTimeBonus.classList.add('disabled');
     updateBonusAvailability();
     deductPoints(BONUS_COST, addTimeBonus);
@@ -1287,6 +1077,7 @@ async function startGame(mode) {
           startTimerInterval();
           setTimeout(() => {
             isRefilling = false;
+            window.isRefilling = isRefilling;
             addTimeBonus.classList.remove('disabled'); // re-enable
             updateBonusAvailability();
           }, 0);
@@ -1460,7 +1251,7 @@ async function startGame(mode) {
     }
   );
 
-  drawBoard(config.size);
+  drawBoard(board, config.size, toggleStone);
 
   // Countdown
   let timeLeft = config.time;
@@ -1530,6 +1321,7 @@ async function startGame(mode) {
       timerUI.showCheck();
       if (!isRefilling) {
         canUseEyeGlass = true;
+        window.canUseEyeGlass = canUseEyeGlass;
         updateBonusAvailability();
       }
       checkButtonShowTimeout = null;
@@ -1548,63 +1340,24 @@ async function startGame(mode) {
 
   timerUI.setProgress(1);
 
-  const getIntersection = (x, y) =>
-    board.querySelector(`.intersection[data-x="${x}"][data-y="${y}"]`);
-
-  const renderFinalStones = () => {
-    if (currentMode === 'position') {
-      clearStones();
-    }
-    stones.forEach((s) => {
-      const inter = getIntersection(s.x, s.y);
-      if (inter) {
-        inter.classList.remove('black', 'white');
-        inter.classList.add(s.color);
-      }
-    });
-  };
-
-  const updateSequenceIntersections = (prevMap, nextMap) => {
-    for (const key of Object.keys(prevMap)) {
-      if (nextMap[key]) continue;
-      const [x, y] = key.split(',').map(Number);
-      const inter = getIntersection(x, y);
-      if (inter) inter.classList.remove('black', 'white');
-    }
-    for (const [key, colorChar] of Object.entries(nextMap)) {
-      if (prevMap[key] === colorChar) continue;
-      const [x, y] = key.split(',').map(Number);
-      const inter = getIntersection(x, y);
-      if (!inter) continue;
-      inter.classList.remove('black', 'white');
-      inter.classList.add(colorChar === 'B' ? 'black' : 'white');
-    }
-  };
-
-  const playSequence = async (moves) => {
-    const sequenceBoard =
-      window.GoMiniBoardLogic.createBoardMatrix(boardDimension);
-    let prevMap = {};
-    const stepDelay = 420;
-    for (const move of moves) {
-      sequenceBoard[move.y][move.x] = move.color;
-      window.GoMiniBoardLogic.checkCaptures(
-        sequenceBoard,
-        move.x,
-        move.y,
-        move.color
-      );
-      const nextMap = window.GoMiniBoardLogic.buildStoneMap(sequenceBoard);
-      updateSequenceIntersections(prevMap, nextMap);
-      prevMap = nextMap;
-      await new Promise((resolve) => setTimeout(resolve, stepDelay));
-    }
-  };
+  const getIntersectionRef = (x, y) => getIntersection(board, x, y);
+  const updateSequenceIntersectionsRef = (prevMap, nextMap) =>
+    updateSequenceIntersections(prevMap, nextMap, getIntersectionRef);
 
   if (currentMode === 'sequence') {
-    await playSequence(snapshot.moves);
+    await playSequence(
+      snapshot.moves,
+      boardDimension,
+      getIntersectionRef,
+      updateSequenceIntersectionsRef
+    );
   }
-  renderFinalStones();
+  renderFinalStones(
+    currentMode,
+    stones,
+    getIntersectionRef,
+    clearStones
+  );
 
   tutorialController.attachToGame({
     board,
@@ -1625,118 +1378,12 @@ async function startGame(mode) {
 
   // ---------- Inner Helpers ----------
 
-  function drawBoard(size) {
-    for (let i = 0; i <= size; i++) {
-      const v = document.createElement('div');
-      v.classList.add('line', 'v');
-      v.style.left = `${(i / size) * 100}%`;
-      board.appendChild(v);
-      const h = document.createElement('div');
-      h.classList.add('line', 'h');
-      h.style.top = `${(i / size) * 100}%`;
-      board.appendChild(h);
-    }
-    for (let y = 0; y <= size; y++) {
-      for (let x = 0; x <= size; x++) {
-        const inter = document.createElement('div');
-        inter.classList.add('intersection');
-        inter.dataset.x = x;
-        inter.dataset.y = y;
-        inter.style.left = `${(x / size) * 100}%`;
-        inter.style.top = `${(y / size) * 100}%`;
-        inter.addEventListener('click', toggleStone);
-        board.appendChild(inter);
-      }
-    }
-  }
-
   function toggleInteraction(enable) {
     document.querySelectorAll('.intersection').forEach((i) => {
       i.style.pointerEvents = enable ? 'auto' : 'none';
     });
     checkBtn.disabled = !enable;
     checkBtn.style.opacity = enable ? '1' : '0.5';
-  }
-
-  function clearStones() {
-    document
-      .querySelectorAll('.intersection')
-      .forEach((i) => i.classList.remove('black', 'white'));
-  }
-
-  function toggleStone(e) {
-    const p = e.target;
-    const hadWhite = p.classList.contains('white');
-    const hadBlack = p.classList.contains('black');
-    const currentTapMode = window.activeGame?.tapMode ?? getTapMode();
-    const hadStone = hadWhite || hadBlack;
-
-    if (currentTapMode === TAP_MODES.TOGGLE) {
-      const now = Date.now();
-      const isDoubleTap =
-        hadStone &&
-        lastStoneTap.target === p &&
-        now - lastStoneTap.time < DOUBLE_TAP_WINDOW;
-      lastStoneTap = { time: now, target: p };
-
-      if (isDoubleTap) {
-        p.classList.remove('black', 'white');
-      } else if (!hadStone) {
-        const lastColor = window.activeGame?.lastPlacedColor ?? 'white';
-        const nextColor = lastColor === 'black' ? 'white' : 'black';
-        p.classList.add(nextColor);
-        if (window.activeGame) {
-          window.activeGame.lastPlacedColor = nextColor;
-        }
-      } else {
-        const nextColor = hadBlack ? 'white' : 'black';
-        p.classList.remove('black', 'white');
-        p.classList.add(nextColor);
-        if (window.activeGame) {
-          window.activeGame.lastPlacedColor = nextColor;
-        }
-      }
-    } else {
-      if (hadWhite) {
-        p.classList.replace('white', 'black');
-      } else if (hadBlack) {
-        p.classList.remove('black');
-      } else {
-        p.classList.add('white');
-      }
-    }
-
-    if (window.activeGame?.mode === 'sequence') {
-      const newColor = p.classList.contains('white')
-        ? 'white'
-        : p.classList.contains('black')
-        ? 'black'
-        : null;
-      const xCoord = Number(p.dataset.x);
-      const yCoord = Number(p.dataset.y);
-      window.activeGame.sequenceHistory =
-        window.activeGame.sequenceHistory || [];
-      const existing = window.activeGame.sequenceHistory.find(
-        (entry) => entry.x === xCoord && entry.y === yCoord
-      );
-      if (existing) {
-        if (newColor) {
-          existing.color = newColor;
-        } else {
-          // Stone cleared, remove from history
-          window.activeGame.sequenceHistory =
-            window.activeGame.sequenceHistory.filter(
-              (entry) => entry !== existing
-            );
-        }
-      } else if (newColor) {
-        window.activeGame.sequenceHistory.push({
-          x: xCoord,
-          y: yCoord,
-          color: newColor,
-        });
-      }
-    }
   }
 
   function checkAnswers() {
