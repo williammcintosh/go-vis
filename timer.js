@@ -333,11 +333,8 @@ export {
   freezeBarState,
   freezeBarStateNextFrame,
   showTimerToast,
-  handleDoubleTap,
-  preventPinchZoom,
   initDoubleTapListeners,
   startTimerInterval,
-  runTimerTick,
   setupTimer,
   initTimerFlow,
 };

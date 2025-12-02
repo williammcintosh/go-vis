@@ -243,26 +243,6 @@ function computeRatingResult({
   };
 }
 
-function updatePlayerRating(params) {
-  const { rating: currentRating, level } = loadDifficultyState();
-  const computed = computeRatingResult({
-    ...params,
-    currentRating,
-  });
-  const nextState = saveDifficultyState({
-    rating: computed.nextRating,
-    level,
-  });
-
-  return {
-    ...nextState,
-    expectedTime: computed.expectedTime,
-    performance: computed.performance,
-    delta: computed.delta,
-    timedOut: computed.timedOut,
-  };
-}
-
 function triggerLevelOverlay(level) {
   const existing = document.querySelector('.level-up-overlay');
   if (existing) existing.remove();
@@ -650,7 +630,6 @@ function createDifficultyOutcomeRecorder({
 }
 
 export {
-  updatePlayerRating,
   calculateExpectedTime,
   calculateLevelDiff,
   incrementLevelIfNeeded,

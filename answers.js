@@ -1,3 +1,5 @@
+import { launchConfetti } from './anim.js';
+
 function checkAnswers({
   timerUI,
   config,
@@ -227,7 +229,7 @@ function checkAnswers({
       okBtn.style.display = 'inline-block';
     }
     levelIncreased = false;
-    window.launchConfetti();
+    launchConfetti();
     setTimeout(() => {
       addScore({
         reactionTime: window.activeGame?.reactionTime || 10000,

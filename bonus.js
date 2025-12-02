@@ -66,7 +66,7 @@ function initAddTimeBonus({
           startTimerInterval();
           setTimeout(() => {
             setIsRefilling(false);
-            addTimeBonus.classList.remove('disabled'); // re-enable
+            addTimeBonus.classList.remove('disabled');
             updateBonusAvailability();
           }, 0);
         }, holdTime);
@@ -157,7 +157,7 @@ function initEyeGlassBonus({
       activeGame.usedAssistBonus = true;
     }
     deductPoints(BONUS_COST, eyeGlassBonus);
-    eyeGlassBonus.classList.add('disabled'); // stop spam
+    eyeGlassBonus.classList.add('disabled');
 
     const moves = activeGame?.gameSnapshot?.moves ?? [];
     const history = activeGame?.sequenceHistory ?? [];

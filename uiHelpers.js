@@ -1,9 +1,3 @@
-function showFeedbackPanel(feedback) {
-  if (!feedback) return;
-  feedback.style.display = 'block';
-  feedback.classList.add('show');
-}
-
 function hideFeedbackPanel(feedback) {
   if (!feedback) return;
   feedback.style.display = 'none';
@@ -146,7 +140,6 @@ function resetGameStateUI({
 }
 
 export {
-  showFeedbackPanel,
   hideFeedbackPanel,
   clearMarkers,
   resetBoardUI,
