@@ -52,6 +52,7 @@ import {
   preparePuzzleData,
 } from './puzzle.js';
 import { setupGameState } from './gameStateSetup.js';
+import { createLevelSelectController } from './levelSelect.js';
 import {
   clearMarkers,
   resetBoardUI,
@@ -147,6 +148,7 @@ setupTimer({
 });
 let difficultyState = saveDifficultyState(loadDifficultyState());
 let nextPuzzleSuggestion = null;
+let levelSelectController = null;
 const MAX_SPEED_BONUS_THRESHOLD = 7000; // ms threshold for max speed bonus
 const SKIP_BUTTON_IDS = ['skipBtn', 'skipButton', 'skipChallengeBtn'];
 const skillRatingEl = (() => {
@@ -161,7 +163,13 @@ const skillRatingEl = (() => {
   levelInfo.appendChild(span);
   return span;
 })();
-renderSkillRating(skillRatingEl, difficultyState.rating, difficultyState?.rating);
+const renderSkillRatingAll = (rating, fallback) => {
+  const value = renderSkillRating(skillRatingEl, rating, fallback);
+  if (skillRatingEl && Number.isFinite(value)) {
+    skillRatingEl.textContent = `${Math.round(value)}`;
+  }
+};
+renderSkillRatingAll(difficultyState.rating, difficultyState?.rating);
 
 function normalizeProgress(progress = {}) {
   return {
@@ -334,10 +342,10 @@ function updateModeStatuses() {
 function updateModeIndicator(mode) {
   const icon = document.getElementById('modeIndicatorIcon');
   const text = document.getElementById('modeIndicatorText');
-  if (!icon || !text) return;
+  if (!icon && !text) return;
   const label = mode === 'sequence' ? 'Sequence Mode' : 'Position Mode';
-  icon.src = MODE_ICONS[mode] ?? MODE_ICONS.position;
-  text.textContent = label;
+  if (icon) icon.src = MODE_ICONS[mode] ?? MODE_ICONS.position;
+  if (text) text.textContent = label;
 }
 
 // ---------- Save State ----------
@@ -394,8 +402,7 @@ const resetStateParams = {
   PLAYER_PROGRESS_KEY,
   CHALLENGE_ATTEMPTS_KEY,
   saveDifficultyState,
-  renderSkillRating: (rating) =>
-    renderSkillRating(skillRatingEl, rating, rating),
+  renderSkillRating: (rating) => renderSkillRatingAll(rating, rating),
   normalizeProgress,
   setProgress: (progress) => {
     window.progress = progress;
@@ -412,9 +419,10 @@ const resetStateParams = {
 };
 
 // Continue existing game, straight to maingame
-continueBtn.addEventListener('click', () =>
-  showMainScreen({ mainGame, show: difficulty, hide: intro, showScreen })
-);
+continueBtn.addEventListener('click', () => {
+  levelSelectController?.hide();
+  showMainScreen({ mainGame, show: difficulty, hide: intro, showScreen });
+});
 
 // Restart confirmation
 startBtn.addEventListener('click', () => {
@@ -426,6 +434,8 @@ startBtn.addEventListener('click', () => {
     difficultyState = resetResult.difficultyState;
     playerProgress = resetResult.playerProgress;
     challengeAttempts = resetResult.challengeAttempts;
+    levelSelectController?.resetSelection();
+    nextPuzzleSuggestion = null;
   }
 });
 
@@ -435,6 +445,8 @@ confirmYes.addEventListener('click', () => {
   difficultyState = resetResult.difficultyState;
   playerProgress = resetResult.playerProgress;
   challengeAttempts = resetResult.challengeAttempts;
+  levelSelectController?.resetSelection();
+  nextPuzzleSuggestion = null;
 });
 
 confirmNo.addEventListener('click', () => {
@@ -450,20 +462,34 @@ function showScreen(show, hide) {
   show.classList.add('active');
 }
 
+levelSelectController = createLevelSelectController({
+  introEl: intro,
+  difficultyEl: difficulty,
+  mainGameEl: mainGame,
+  showScreen,
+  setMode: (mode) => {
+    currentMode = mode;
+    window.currentMode = mode;
+  },
+  setNextPuzzleSuggestion: (selection) => {
+    nextPuzzleSuggestion = selection;
+  },
+  startGame: (mode) => startGame(mode),
+  getSkillRating: () => difficultyState?.rating ?? 0,
+  getPlayerProgress: () => playerProgress,
+});
+
 intro.classList.add('active');
 
 document.getElementById('homeBtn').onclick = () => {
+  levelSelectController?.hide();
   showScreen(intro, difficulty);
 };
 
 // ---------- Difficulty Selection ----------
 document.querySelectorAll('.diffBtn').forEach((b) => {
   b.onclick = () => {
-    currentMode = b.dataset.mode;
-    window.currentMode = currentMode;
-    difficulty.classList.remove('active');
-    mainGame.style.display = 'block';
-    startGame(currentMode);
+    levelSelectController?.open(b.dataset.mode);
   };
 });
 
@@ -500,6 +526,7 @@ homeBtn2.addEventListener('click', () => {
       speedMultiplier = value;
     },
   });
+  levelSelectController?.hide();
 });
 
 nextBtn.onclick = async () => {
@@ -522,6 +549,14 @@ levelOkBtn.onclick = () => {
 
 // ---------- Main Game ----------
 async function startGame(mode) {
+  const manualSelection = levelSelectController?.getSelection?.();
+  if (manualSelection) {
+    nextPuzzleSuggestion = {
+      boardSize: manualSelection.boardSize,
+      stoneCount: manualSelection.stoneCount,
+    };
+  }
+
   const { config, boardDimension } = setupGameState({
     mode,
     progress: window.progress,
@@ -532,7 +567,7 @@ async function startGame(mode) {
     getBoardSizeForLevel,
     updateModeIndicator,
     renderSkillRating: (rating) =>
-      renderSkillRating(skillRatingEl, rating, difficultyState?.rating),
+      renderSkillRatingAll(rating, difficultyState?.rating),
     nextPuzzleSuggestion,
     setNextPuzzleSuggestion: (v) => {
       nextPuzzleSuggestion = v;
@@ -657,6 +692,11 @@ async function startGame(mode) {
     activeGame: window.activeGame,
   });
 
+  levelSelectController?.updateHeader({
+    activeGame: window.activeGame,
+    mode,
+  });
+
   drawBoard(board, config.size, toggleStone);
   timerFlow.lockInteractions();
 
@@ -728,6 +768,14 @@ async function startGame(mode) {
     logSkillRatingDebug,
     writeSkillDebug,
     setNextPuzzleSuggestion: (next) => {
+      const selected = levelSelectController?.getSelection?.();
+      if (selected) {
+        nextPuzzleSuggestion = {
+          boardSize: selected.boardSize,
+          stoneCount: selected.stoneCount,
+        };
+        return;
+      }
       nextPuzzleSuggestion = next;
     },
     getProgress: () => window.progress,
@@ -735,7 +783,22 @@ async function startGame(mode) {
     currentMode,
     activeGame: window.activeGame,
   });
-  window.recordDifficultyOutcome = recordDifficultyOutcome;
+  window.recordDifficultyOutcome = (timedOut) => {
+    const ratingBefore = difficultyState?.rating ?? 0;
+    const result = recordDifficultyOutcome(timedOut);
+    const ratingAfter =
+      result?.difficultyState?.rating ?? difficultyState?.rating ?? ratingBefore;
+    if (result?.difficultyState) {
+      difficultyState = result.difficultyState;
+    }
+    renderSkillRatingAll(ratingAfter, ratingAfter);
+    levelSelectController?.handleRatingChange?.({
+      ratingBefore,
+      ratingAfter,
+      activeGame: window.activeGame,
+    });
+    return result;
+  };
 
   const handleCheckAnswers = createCheckAnswersHandler({
     timerUI,

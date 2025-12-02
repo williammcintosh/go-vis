@@ -73,22 +73,21 @@
       <div id="mainGame">
         <div class="game-wrapper">
           <div id="gameHeader">
-            <p id="scoreDisplay">
+            <div class="header-block" id="scoreDisplay">
               <span class="label">Score</span><br />
               <span id="scoreValue">0</span>
-            </p>
-            <div id="modeIndicator">
-              <img
-                id="modeIndicatorIcon"
-                src="images/position_small.png"
-                alt="mode icon"
-              />
-              <span id="modeIndicatorText">Position Mode</span>
             </div>
-            <p id="levelInfo">
-              <span id="levelText"></span><br />
-              <span id="roundText"></span>
-            </p>
+            <div class="header-block header-center">
+              <div id="modeIndicatorText" class="mode-chip">Position Mode</div>
+              <p id="levelInfo">
+                <span id="levelText"></span><br />
+                <span id="roundText"></span>
+              </p>
+            </div>
+            <div class="header-block header-rating">
+              <span class="label">Skill Rating</span><br />
+              <span id="skillRatingText">--</span>
+            </div>
           </div>
           <div id="board"></div>
           <div id="timerContainer" class="is-timing" aria-live="polite">

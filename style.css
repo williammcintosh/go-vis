@@ -144,7 +144,7 @@ body {
   align-items: stretch;
   width: var(--content-width);
   max-width: var(--content-width);
-  margin: 0.25rem auto;
+  margin: 0.75rem auto 0;
 }
 
 button.bonus-button {
@@ -221,7 +221,7 @@ button.bonus-button.disabled .bonus-cost {
   width: var(--content-width);
   max-width: var(--content-width);
   aspect-ratio: 1 / 1;
-  margin: 0 auto;
+  margin: clamp(1.4rem, 6vh, 2.6rem) auto 0;
   background: var(--tan-bg);
 }
 
@@ -442,6 +442,7 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   text-align: center;
   color: #222;
 }
+
 
 .btn-col {
   display: flex;
@@ -729,36 +730,74 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   min-width: 0;
 }
 
-#gameHeader,
-#gameHeader > * {
-  transition: font-size 0.2s ease;
+#gameHeader {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: center;
+  width: 100%;
+  max-width: var(--max-board);
+  gap: 0.5rem;
+  margin-bottom: clamp(0.8rem, 3vh, 1.4rem);
 }
 
-#modeIndicator {
+.header-block {
+  text-align: center;
+}
+
+.header-center {
   display: flex;
   flex-direction: column;
+  gap: 0.15rem;
+  justify-content: center;
   align-items: center;
-  gap: 0.2rem;
-  text-transform: uppercase;
-  font-size: clamp(0.6rem, 1.2vw + 0.2vh, 0.9rem);
-  letter-spacing: 0.06em;
-  color: #1b170e;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
 }
 
-#modeIndicator img {
-  width: 40px;
-  height: auto;
-  display: block;
+.header-rating {
+  text-align: right;
 }
 
-#modeIndicatorText {
-  font-size: clamp(0.72rem, 1.6vw + 0.5vh, 1.25rem);
-  letter-spacing: 0.06em;
-  text-align: center;
+#scoreDisplay,
+#levelInfo,
+#skillRatingText {
   margin: 0;
+  padding: 0;
+  line-height: 1.1;
+  display: inline-block;
+  font-size: clamp(0.65rem, 1.4vw + 0.55vh, 1.1rem);
+  font-weight: 600;
+}
+
+#scoreDisplay {
+  text-align: left;
+}
+
+#levelInfo {
+  text-align: center;
+  width: 200px;
+  max-width: 96vw;
+}
+
+#scoreValue {
+  display: inline-block;
+  font-size: clamp(1.1rem, 3.5vw + 1vh, 2.3rem);
+  color: #122c13;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+#skillRatingText {
+  font-size: clamp(1.2rem, 2vw + 0.6vh, 1.9rem);
+  color: #0a3b0f;
+}
+
+.mode-chip {
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-size: clamp(0.7rem, 1.3vw + 0.3vh, 1rem);
+  color: #1b170e;
 }
 
 @media (max-height: 720px) {
@@ -774,31 +813,6 @@ button:not(.bonus-button):not(#checkBtn):disabled {
     padding: 0.45rem 0.7rem;
     font-size: 0.9rem;
   }
-}
-
-#scoreDisplay,
-#levelInfo {
-  margin: 0;
-  padding: 0;
-  line-height: 1;
-  display: inline-block;
-  font-size: clamp(0.55rem, 1.4vw + 0.55vh, 1.3rem);
-  font-weight: 600;
-}
-
-#scoreDisplay {
-  text-align: left;
-}
-
-#levelInfo {
-  text-align: right;
-}
-
-#scoreValue {
-  display: inline-block;
-  font-size: clamp(1rem, 3.5vw + 1vh, 2.3rem);
-  color: #122c13;
-  transition: transform 0.2s ease, color 0.2s ease;
 }
 
 .score-alert {
