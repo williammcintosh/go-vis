@@ -53,14 +53,16 @@ function setupGameState({
   ).textContent = `Round ${gameState.currentRound}/${gameState.totalRounds}`;
 
   updateModeIndicator(mode);
+  const TIME_PER_STONE = 7;
+  const stoneCount = Math.max(
+    MIN_STONES,
+    plannedPuzzle?.stoneCount ?? levelConfig.stones
+  );
   const config = {
     intervalSpeed: MODE_INTERVAL_SPEED[mode] ?? 40,
-    stoneCount: Math.max(
-      MIN_STONES,
-      plannedPuzzle?.stoneCount ?? levelConfig.stones
-    ),
+    stoneCount,
     size: Math.max(2, (resolvedBoardSize || levelConfig.boardSize) - 1),
-    time: levelConfig.time,
+    time: stoneCount * TIME_PER_STONE,
   };
 
   const boardDimension = config.size + 1;

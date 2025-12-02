@@ -62,7 +62,7 @@ function initAddTimeBonus({
       } else {
         setTimeout(() => {
           setTimeLeft(config.time);
-          timerUI.setProgress(1);
+          timerUI.setProgress(1, { instant: true });
           startTimerInterval();
           setTimeout(() => {
             setIsRefilling(false);

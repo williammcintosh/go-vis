@@ -57,7 +57,7 @@ function initTimerFlow({
       clearInterval(activeGame.timer);
     }
     setTimeLeft(config.time);
-    timerUI?.setProgress?.(1);
+    timerUI?.setProgress?.(1, { instant: true });
   };
 
   const markPlayerSkipped = () => {
@@ -141,10 +141,18 @@ function createTimerUI() {
   const bar = document.getElementById('timerBar');
   const checkBtn = document.getElementById('checkBtn');
 
-  const setProgress = (ratio) => {
+  const setProgress = (ratio, { instant = false } = {}) => {
     const clamped = Math.max(0, Math.min(1, ratio));
     if (bar) {
+      if (instant) {
+        bar.classList.add('no-transition');
+      }
       bar.style.setProperty('--timer-progress', clamped);
+      if (instant) {
+        requestAnimationFrame(() => {
+          bar.classList.remove('no-transition');
+        });
+      }
     }
   };
 
@@ -161,7 +169,7 @@ function createTimerUI() {
   };
 
   const reset = () => {
-    setProgress(1);
+    setProgress(1, { instant: true });
     showTimer();
   };
 

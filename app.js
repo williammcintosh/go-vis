@@ -676,7 +676,7 @@ async function startGame(mode) {
     timerUI,
   });
 
-  timerUI.setProgress(1);
+  timerUI.setProgress(1, { instant: true });
 
   const { getIntersectionRef, updateSequenceIntersectionsRef } =
     createIntersectionHelpers(board);
