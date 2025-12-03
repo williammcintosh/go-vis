@@ -11,6 +11,22 @@
   </head>
   <body>
     <body>
+      <div id="goldBadge" class="gold-badge" aria-live="polite">
+        <div class="gold-badge__frame">
+          <div class="gold-badge__core">
+            <span id="goldValue" class="gold-badge__value">0</span>
+            <span class="gold-badge__label">Gold</span>
+          </div>
+        </div>
+      </div>
+      <div id="skillBadge" class="skill-badge" aria-live="polite">
+        <div class="skill-badge__frame">
+          <div class="skill-badge__core">
+            <span id="skillRatingText" class="skill-badge__value">--</span>
+            <span class="skill-badge__label">Skill</span>
+          </div>
+        </div>
+      </div>
       <div id="intro" class="screen active">
         <div class="top">
           <img src="images/go-icon.png" alt="Go Viz icon" class="logo" />
@@ -73,10 +89,7 @@
       <div id="mainGame">
         <div class="game-wrapper">
           <div id="gameHeader">
-            <div class="header-block" id="scoreDisplay">
-              <span class="label">Score</span><br />
-              <span id="scoreValue">0</span>
-            </div>
+            <div class="header-block header-gold-spacer" aria-hidden="true"></div>
             <div class="header-block header-center">
               <div id="modeIndicatorText" class="mode-chip">Position Mode</div>
               <p id="levelInfo">
@@ -84,10 +97,7 @@
                 <span id="roundText"></span>
               </p>
             </div>
-            <div class="header-block header-rating">
-              <span class="label">Skill Rating</span><br />
-              <span id="skillRatingText">--</span>
-            </div>
+            <div class="header-block header-rating"></div>
           </div>
           <div id="board"></div>
           <div id="timerContainer" class="is-timing" aria-live="polite">
@@ -112,7 +122,7 @@
           </div>
               <div id="feedback">
               <p id="feedbackMsg"></p>
-              <div id="scorePopup"></div>
+              <div id="goldPopup"></div>
               <button id="nextBtn">Next Challenge</button>
               <div class="feedback-bottom-row">
                 <button id="homeBtn2">Home</button>

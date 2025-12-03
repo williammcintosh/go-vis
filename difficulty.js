@@ -72,7 +72,8 @@ function renderSkillRating(targetEl, rating, fallbackRating) {
     : Number.isFinite(fallback)
     ? fallback
     : 0;
-  targetEl.textContent = `Skill Rating: ${Math.round(value)}`;
+  const displayValue = Number.isFinite(value) ? Math.round(value) : '--';
+  targetEl.textContent = `${displayValue}`;
   return value;
 }
 
@@ -86,7 +87,7 @@ function showRatingGain(amount, targetEl = null) {
   const rect = target.getBoundingClientRect();
   const baseY = rect.top + rect.height * 0.8;
   const float = document.createElement('div');
-  float.className = 'score-float rating-float';
+  float.className = 'rating-float';
   float.textContent = amount > 0 ? `+${amount}` : `${amount}`;
   float.style.transform = `translate(${rect.left + rect.width / 2}px, ${baseY}px)`;
   document.body.appendChild(float);

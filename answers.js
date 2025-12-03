@@ -7,7 +7,7 @@ function checkAnswers({
   speedMultiplier,
   MAX_SPEED_BONUS_THRESHOLD,
   freezeBarState,
-  addScore,
+  addGold,
   logSkillRatingDebug,
 }) {
   if (window.activeGame?.timer) {
@@ -225,10 +225,10 @@ function checkAnswers({
     const levelOverlayActive = () =>
       Boolean(document.querySelector('.level-up-overlay'));
 
-    // Add score with delay for animation sync
+    // Add gold with delay for animation sync
     nextBtn.disabled = true;
     setTimeout(() => {
-      addScore({
+      addGold({
         reactionTime: window.activeGame?.reactionTime || 10000,
         finalBoardCorrect,
         sequenceOrderIssues,
@@ -265,7 +265,7 @@ function createCheckAnswersHandler({
   speedMultiplier,
   MAX_SPEED_BONUS_THRESHOLD,
   freezeBarState,
-  addScore,
+  addGold,
   logSkillRatingDebug,
   getTimeLeft,
 }) {
@@ -278,7 +278,7 @@ function createCheckAnswersHandler({
       speedMultiplier,
       MAX_SPEED_BONUS_THRESHOLD,
       freezeBarState,
-      addScore,
+      addGold,
       logSkillRatingDebug,
       timeLeft: getTimeLeft?.() ?? 0,
     });

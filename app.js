@@ -34,13 +34,13 @@ import {
   createIntersectionHelpers,
 } from './board.js';
 import {
-  addScore,
-  deductPoints,
-  flashScoreWarning,
+  addGold,
+  deductGold,
+  flashGoldWarning,
   updateBonusAvailability,
   isFeedbackVisible,
   calculateSpeedBonus,
-} from './score.js';
+} from './gold.js';
 window.updateBonusAvailability = updateBonusAvailability;
 import { createTutorialController } from './tutorial.js';
 import { checkAnswers, createCheckAnswersHandler } from './answers.js';
@@ -150,6 +150,8 @@ let nextPuzzleSuggestion = null;
 let levelSelectController = null;
 const MAX_SPEED_BONUS_THRESHOLD = 7000; // ms threshold for max speed bonus
 const SKIP_BUTTON_IDS = ['skipBtn', 'skipButton', 'skipChallengeBtn'];
+const goldBadge = document.getElementById('goldBadge');
+const skillBadge = document.getElementById('skillBadge');
 const skillRatingEl = (() => {
   const existing = document.getElementById('skillRatingText');
   if (existing) return existing;
@@ -157,16 +159,28 @@ const skillRatingEl = (() => {
   if (!levelInfo) return null;
   const span = document.createElement('span');
   span.id = 'skillRatingText';
-  span.textContent = 'Skill Rating: --';
+  span.textContent = '--';
   levelInfo.appendChild(document.createElement('br'));
   levelInfo.appendChild(span);
   return span;
 })();
+const showGoldBadge = () => {
+  if (goldBadge) {
+    goldBadge.classList.add('is-visible');
+  }
+};
+const showSkillBadge = () => {
+  if (skillBadge) {
+    skillBadge.classList.add('is-visible');
+  }
+};
 const renderSkillRatingAll = (rating, fallback) => {
   const value = renderSkillRating(skillRatingEl, rating, fallback);
-  if (skillRatingEl && Number.isFinite(value)) {
-    skillRatingEl.textContent = `${Math.round(value)}`;
+  if (skillRatingEl) {
+    const displayValue = Number.isFinite(value) ? Math.round(value) : '--';
+    skillRatingEl.textContent = `${displayValue}`;
   }
+  return value;
 };
 renderSkillRatingAll(difficultyState.rating, difficultyState?.rating);
 
@@ -183,26 +197,26 @@ function normalizeProgress(progress = {}) {
 
 window.progress = normalizeProgress(window.progress);
 const ANIM_DELAY = 600;
-const DEDUCT_TARGET_ID = 'scoreValue';
+const DEDUCT_TARGET_ID = 'goldValue';
 const BONUS_COST = 500;
 window.ANIM_DELAY = ANIM_DELAY;
 window.BONUS_COST = BONUS_COST;
 const POSITION_BONUS = 200;
 const COLOR_BONUS = 200;
 const SEQUENCE_BONUS = 250;
-const SCORE_STEP_DELAY = 2; // base ms between score increments
-const SCORE_AWARD_PAUSE = 90;
+const GOLD_STEP_DELAY = 2; // base ms between gold increments
+const GOLD_AWARD_PAUSE = 90;
 window.POSITION_BONUS = POSITION_BONUS;
 window.COLOR_BONUS = COLOR_BONUS;
 window.SEQUENCE_BONUS = SEQUENCE_BONUS;
-window.SCORE_STEP_DELAY = SCORE_STEP_DELAY;
-window.SCORE_AWARD_PAUSE = SCORE_AWARD_PAUSE;
+window.GOLD_STEP_DELAY = GOLD_STEP_DELAY;
+window.GOLD_AWARD_PAUSE = GOLD_AWARD_PAUSE;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 window.delay = delay;
 
 // ---------- Game State ----------
-const gameState = { score: 0 };
+const gameState = { gold: 0 };
 window.gameState = gameState;
 
 function persistProgress() {
@@ -210,7 +224,7 @@ function persistProgress() {
     'goVizProgress',
     JSON.stringify({
       progress: window.progress,
-      score: gameState.score,
+      gold: gameState.gold,
     })
   );
 }
@@ -319,7 +333,7 @@ const confirmNo = document.getElementById('confirmNo');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsHomeBtn = document.getElementById('settingsHomeBtn');
 const tapModeInputs = document.querySelectorAll('input[name="tapMode"]');
-const scoreElement = document.getElementById('scoreValue');
+const goldElement = document.getElementById('goldValue');
 
 const tutorialHasRun = localStorage.getItem(TUTORIAL_KEY) === '1';
 tutorialController.configure({ shouldRun: !saved && !tutorialHasRun });
@@ -343,15 +357,22 @@ if (document.readyState === 'loading') {
 
 if (saved && typeof saved === 'object') {
   window.progress = normalizeProgress(saved.progress);
-  gameState.score = Number(saved.score) || 0; // restore saved score or default to 0
+  const savedGold = Number(saved.gold);
+  const legacyGold = Number(saved.score);
+  const resolvedGold = Number.isFinite(savedGold)
+    ? savedGold
+    : Number.isFinite(legacyGold)
+    ? legacyGold
+    : 0;
+  gameState.gold = resolvedGold;
 
-  // update the score display on screen
-  if (scoreElement) {
-    scoreElement.textContent = gameState.score;
+  // update the gold display on screen
+  if (goldElement) {
+    goldElement.textContent = gameState.gold;
   }
 } else {
   window.progress = normalizeProgress();
-  gameState.score = 0; // ensure score starts at 0 for new games
+  gameState.gold = 0; // ensure gold starts at 0 for new games
 }
 refreshHomeButtons();
 updateBonusAvailability();
@@ -374,7 +395,7 @@ const resetStateParams = {
   difficulty,
   intro,
   refreshHomeButtons,
-  scoreElement,
+  goldElement,
 };
 
 // Continue existing game, straight to maingame
@@ -448,6 +469,8 @@ document.getElementById('homeBtn').onclick = () => {
 // ---------- Difficulty Selection ----------
 document.querySelectorAll('.diffBtn').forEach((b) => {
   b.onclick = () => {
+    showGoldBadge();
+    showSkillBadge();
     levelSelectController?.open(b.dataset.mode);
   };
 });
@@ -503,6 +526,8 @@ nextBtn.onclick = async () => {
 
 // ---------- Main Game ----------
 async function startGame(mode) {
+  showGoldBadge();
+  showSkillBadge();
   const manualSelection = levelSelectController?.getSelection?.();
   if (manualSelection) {
     nextPuzzleSuggestion = {
@@ -596,10 +621,10 @@ async function startGame(mode) {
     timerUI,
     startTimerInterval,
     updateBonusAvailability,
-    deductPoints,
+    deductPoints: deductGold,
     tutorialController,
     showTimerToast,
-    flashScoreWarning,
+    flashGoldWarning,
     BONUS_COST,
     getIsRefilling: () => isRefilling,
     setIsRefilling: (v) => {
@@ -760,7 +785,7 @@ async function startGame(mode) {
     speedMultiplier,
     MAX_SPEED_BONUS_THRESHOLD,
     freezeBarState,
-    addScore,
+    addGold,
     logSkillRatingDebug,
     getTimeLeft: () => timerFlow.getTimeLeft(),
   });

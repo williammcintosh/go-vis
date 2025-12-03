@@ -101,7 +101,7 @@ function resetGameStateUI({
   difficulty,
   intro,
   refreshHomeButtons,
-  scoreElement,
+  goldElement,
 }) {
   localStorage.removeItem('goVizProgress');
   localStorage.removeItem('skill_rating');
@@ -116,9 +116,9 @@ function resetGameStateUI({
   const playerProgress = emptyPlayerProgress();
   const challengeAttempts = emptyChallengeAttempts();
 
-  gameState.score = 0;
-  if (scoreElement) {
-    scoreElement.textContent = '0';
+  gameState.gold = 0;
+  if (goldElement) {
+    goldElement.textContent = '0';
   }
   resetTutorialProgress?.();
 

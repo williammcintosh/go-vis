@@ -444,7 +444,6 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   color: #222;
 }
 
-
 .btn-col {
   display: flex;
   flex-direction: column;
@@ -767,13 +766,15 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   align-items: center;
 }
 
+.header-gold-spacer {
+  min-height: 1.5rem;
+}
+
 .header-rating {
   text-align: right;
 }
 
-#scoreDisplay,
-#levelInfo,
-#skillRatingText {
+#levelInfo {
   margin: 0;
   padding: 0;
   line-height: 1.1;
@@ -782,26 +783,184 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   font-weight: 600;
 }
 
-#scoreDisplay {
-  text-align: left;
-}
-
 #levelInfo {
   text-align: center;
   width: 200px;
   max-width: 96vw;
 }
 
-#scoreValue {
-  display: inline-block;
-  font-size: clamp(1.1rem, 3.5vw + 1vh, 2.3rem);
-  color: #122c13;
-  transition: transform 0.2s ease, color 0.2s ease;
+#skillBadge {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 180ms ease, transform 180ms ease;
 }
 
-#skillRatingText {
-  font-size: clamp(1.2rem, 2vw + 0.6vh, 1.9rem);
-  color: #0a3b0f;
+#skillBadge.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.skill-badge__frame {
+  position: relative;
+  background: conic-gradient(
+    from 215deg,
+    #0c0c0c 0deg 205deg,
+    #fdfbf6 205deg 360deg
+  );
+  padding: 0.6rem;
+  border-radius: 26px;
+  box-shadow: inset 0 0 0 2px #111, 1px 1px 1px 3px #fff, 0 0 4px 4px #fdfbf6,
+    18px 18px 18px rgba(0, 0, 0, 0);
+  overflow: hidden;
+}
+
+.skill-badge__frame::before {
+  content: '';
+  position: absolute;
+  inset: 0.28rem;
+  border-radius: 22px;
+  background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.65),
+      rgba(255, 255, 255, 0)
+    )
+    center/140% 140% no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.42;
+  z-index: 0;
+}
+
+.skill-badge__core {
+  background: #fff;
+  border: 2px solid #111;
+  border-radius: 18px;
+  padding: 0.45rem 0.9rem;
+  min-width: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.18rem;
+  position: relative;
+  z-index: 1;
+}
+
+.skill-badge__value {
+  font-size: clamp(1.35rem, 2vw + 1vh, 2.35rem);
+  font-weight: 800;
+  color: #111;
+  line-height: 1;
+}
+
+.skill-badge__label {
+  font-size: clamp(0.75rem, 1vw + 0.24vh, 1rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #111;
+  line-height: 1.05;
+}
+
+#goldBadge {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+#goldBadge.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.gold-badge__frame {
+  position: relative;
+  background: conic-gradient(
+    from 215deg,
+    #0c0c0c 0deg 205deg,
+    #f4c14f 205deg 360deg
+  );
+  padding: 0.6rem;
+  border-radius: 26px;
+  box-shadow: inset 0 0 0 2px #111, 1px 1px 1px 3px #fff7d6, 0 0 4px 4px #f9d870,
+    18px 18px 18px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.gold-badge__frame::before {
+  content: '';
+  position: absolute;
+  inset: 0.28rem;
+  border-radius: 22px;
+  background: linear-gradient(
+      145deg,
+      rgba(255, 248, 220, 0.7),
+      rgba(255, 248, 220, 0)
+    )
+    center/140% 140% no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.45;
+  z-index: 0;
+}
+
+.gold-badge__core {
+  background: #fffaf0;
+  border: 2px solid #111;
+  border-radius: 18px;
+  padding: 0.45rem 0.9rem;
+  min-width: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.18rem;
+  position: relative;
+  z-index: 1;
+}
+
+.gold-badge__value {
+  font-size: clamp(1.35rem, 2vw + 1vh, 2.35rem);
+  font-weight: 800;
+  color: #111;
+  line-height: 1;
+}
+
+.gold-badge__label {
+  font-size: clamp(0.75rem, 1vw + 0.24vh, 1rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #111;
+  line-height: 1.05;
+}
+
+@media (max-width: 540px) {
+  #skillBadge {
+    top: 8px;
+    right: 8px;
+  }
+
+  .skill-badge__core {
+    min-width: 76px;
+    padding: 0.38rem 0.75rem;
+  }
+
+  #goldBadge {
+    top: 8px;
+    left: 8px;
+  }
+
+  .gold-badge__core {
+    min-width: 76px;
+    padding: 0.38rem 0.75rem;
+  }
 }
 
 .mode-chip {
@@ -830,11 +989,11 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   }
 }
 
-.score-alert {
-  animation: scoreAlertPulse 0.45s ease;
+.gold-alert {
+  animation: goldAlertPulse 0.45s ease;
 }
 
-@keyframes scoreAlertPulse {
+@keyframes goldAlertPulse {
   0% {
     transform: scale(1);
   }
@@ -966,7 +1125,7 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   }
 }
 
-#scorePopup {
+#goldPopup {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -975,7 +1134,8 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   z-index: 10;
 }
 
-.score-float {
+.gold-float,
+.rating-float {
   position: fixed;
   left: 0;
   top: 0;
@@ -989,7 +1149,11 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   color: #4caf50;
 }
 
-.score-float--deduct {
+.gold-float {
+  color: #4caf50;
+}
+
+.gold-float--deduct {
   color: #c0392b;
 }
 
@@ -1091,7 +1255,7 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   background: black;
 }
 
-@keyframes scorePulse {
+@keyframes goldPulse {
   0% {
     transform: scale(1);
   }
@@ -1105,7 +1269,7 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   }
 }
 
-@keyframes scoreDeduct {
+@keyframes goldDeduct {
   0% {
     transform: scale(1);
   }

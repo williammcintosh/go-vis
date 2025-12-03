@@ -200,9 +200,12 @@ function createTutorialController() {
   }
 
   function grantStarterBoost() {
-    if (gameState.score < 600) {
-      gameState.score = 600;
-      document.getElementById('scoreValue').textContent = gameState.score;
+    if (gameState.gold < 600) {
+      gameState.gold = 600;
+      const goldValue = document.getElementById('goldValue');
+      if (goldValue) {
+        goldValue.textContent = gameState.gold;
+      }
       updateBonusAvailability();
     }
     context?.addTimeBoost?.(5);

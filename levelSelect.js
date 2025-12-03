@@ -80,7 +80,7 @@ function createLevelSelectController({
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 2.25rem 1.2rem;
+        padding: 3.35rem 1.2rem 2.25rem;
         opacity: 0;
         pointer-events: none;
         transition: opacity 200ms ease;
@@ -111,7 +111,7 @@ function createLevelSelectController({
       .level-select__header {
         width: 100%;
         display: grid;
-        grid-template-columns: auto 1fr;
+        grid-template-columns: 1fr;
         align-items: center;
         gap: 0.85rem;
       }
@@ -141,6 +141,12 @@ function createLevelSelectController({
         width: 100%;
         align-items: center;
       }
+      .level-select__footer {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        margin-top: 0.5rem;
+      }
       .level-select__board-card {
         width: var(--layout-width, min(90vw, 420px));
         max-width: var(--layout-width, 420px);
@@ -148,32 +154,6 @@ function createLevelSelectController({
         flex-direction: column;
         align-items: stretch;
         gap: 0.75rem;
-      }
-      .level-select__rating {
-        position: sticky;
-        top: 0.25rem;
-        z-index: 21;
-        background: rgba(255, 255, 255, 0.92);
-        border: 2px solid rgba(70, 116, 65, 0.35);
-        color: #0b360f;
-        padding: 0.65rem 0.9rem;
-        border-radius: 12px;
-        text-align: center;
-        font-weight: 700;
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
-        margin-bottom: 0.35rem;
-        width: min(460px, 100%);
-      }
-      .level-select__rating-label {
-        margin: 0 0 0.15rem;
-        font-size: 0.9rem;
-        letter-spacing: 0.04em;
-      }
-      .level-select__rating-value {
-        margin: 0;
-        font-size: 1.35rem;
-        font-weight: 800;
-        letter-spacing: 0.06em;
       }
       .level-select__board-card.locked {
         opacity: 0.7;
@@ -184,7 +164,7 @@ function createLevelSelectController({
       }
       .level-select__board-icon {
         position: relative;
-        width: 90px;
+        width: 72px;
       }
       .level-select__board-icon img {
         display: block;
@@ -237,8 +217,8 @@ function createLevelSelectController({
         position: absolute;
         top: 50%;
         left: 50%;
-        width: 48px;
-        height: 48px;
+        width: 32px;
+        height: 32px;
         transform: translate(-50%, -50%);
         pointer-events: none;
       }
@@ -322,6 +302,7 @@ function createLevelSelectController({
         padding: 0.65rem 0.9rem;
         min-width: 92px;
         justify-self: start;
+        width: min(320px, 100%);
       }
       @media (max-width: 540px) {
         .level-select__header {
@@ -329,7 +310,6 @@ function createLevelSelectController({
           justify-items: center;
         }
         .level-select__back {
-          width: min(320px, 100%);
           justify-self: center;
         }
         .level-select__heading {
@@ -450,13 +430,6 @@ function createLevelSelectController({
     return Number.isFinite(value) ? value : 0;
   }
 
-  function updateRatingBadge() {
-    const el = state.screen?.querySelector('#levelSelectRating');
-    if (!el) return;
-    const rating = Math.round(getRating());
-    el.textContent = `${rating}`;
-  }
-
   function buildScreen() {
     if (state.screen) return state.screen;
     ensureStyles();
@@ -466,12 +439,7 @@ function createLevelSelectController({
     screen.innerHTML = `
       <div class="level-select__inner">
         <div class="level-select__masthead">
-          <div class="level-select__rating">
-            <p class="level-select__rating-label">Skill Rating</p>
-            <p class="level-select__rating-value" id="levelSelectRating">--</p>
-          </div>
           <div class="level-select__header">
-            <button class="level-select__back" data-action="back">Back</button>
             <div class="level-select__title">
               <p class="level-select__eyebrow">Board Select</p>
               <h2 class="level-select__heading">Pick a board</h2>
@@ -479,6 +447,9 @@ function createLevelSelectController({
           </div>
         </div>
         <div class="level-select__grid" id="boardOptions"></div>
+        <div class="level-select__footer">
+          <button class="level-select__back" data-action="back">Back</button>
+        </div>
       </div>
     `;
 
@@ -506,7 +477,6 @@ function createLevelSelectController({
   function renderBoards() {
     const grid = state.screen?.querySelector('#boardOptions');
     if (!grid) return;
-    updateRatingBadge();
     const rating = getRating();
     grid.innerHTML = '';
     [5, 6, 7].forEach((size) => {
@@ -526,13 +496,6 @@ function createLevelSelectController({
       img.src = BOARD_IMAGES[size] || BOARD_IMAGES[5];
       img.alt = `${boardKey} board`;
       iconWrap.appendChild(img);
-      if (locked) {
-        const lockImg = document.createElement('img');
-        lockImg.src = 'images/lock_lock.png';
-        lockImg.alt = 'Locked';
-        lockImg.className = 'level-select__lock';
-        iconWrap.appendChild(lockImg);
-      }
 
       const content = document.createElement('div');
       content.className = 'mode-content level-select__board-content';
@@ -541,6 +504,14 @@ function createLevelSelectController({
       btn.textContent = `${boardKey} board`;
       const requirement = getRequirement(size);
       if (locked) btn.classList.add('locked');
+      if (locked) {
+        const lockImg = document.createElement('img');
+        lockImg.src = 'images/lock_lock.png';
+        lockImg.alt = 'Locked';
+        lockImg.className = 'level-select__stone-lock';
+        btn.classList.add('level-select__board-lock-wrap');
+        btn.appendChild(lockImg);
+      }
       const status = document.createElement('p');
       status.className = 'mode-status level-select__status';
       status.textContent = locked ? `Needs skill rating ${requirement}` : 'Unlocked';
@@ -685,7 +656,6 @@ function createLevelSelectController({
     introEl?.classList.remove('active');
     screen?.classList.add('active');
     await ensureTotals();
-    updateRatingBadge();
     renderBoards();
   }
 
@@ -773,7 +743,6 @@ function createLevelSelectController({
   function handleRatingChange({ ratingBefore, ratingAfter }) {
     if (ratingAfter <= ratingBefore) return;
     ensureTotals().then(() => {
-      updateRatingBadge();
       renderBoards();
       const unlocked = detectUnlocks(ratingBefore, ratingAfter);
       if (!unlocked) return;

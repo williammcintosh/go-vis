@@ -4,10 +4,10 @@ function initAddTimeBonus({
   timerUI,
   startTimerInterval,
   updateBonusAvailability,
-  deductPoints,
+  deductGold,
   tutorialController,
   showTimerToast,
-  flashScoreWarning,
+  flashGoldWarning,
   BONUS_COST,
   getIsRefilling,
   setIsRefilling,
@@ -20,7 +20,7 @@ function initAddTimeBonus({
   return function addTimeHandler() {
     const gameState = getGameState?.();
     const activeGame = getActiveGame?.();
-    const cannotAfford = (gameState?.score ?? 0) < BONUS_COST;
+    const cannotAfford = (gameState?.gold ?? 0) < BONUS_COST;
     if (
       addTimeBonus.classList.contains('disabled') ||
       isFeedbackVisible() ||
@@ -28,7 +28,7 @@ function initAddTimeBonus({
       getIsRefilling()
     ) {
       if (cannotAfford) {
-        flashScoreWarning();
+        flashGoldWarning();
       }
       return;
     }
@@ -38,7 +38,7 @@ function initAddTimeBonus({
     setIsRefilling(true);
     addTimeBonus.classList.add('disabled');
     updateBonusAvailability();
-    deductPoints(BONUS_COST, addTimeBonus);
+    deductGold(BONUS_COST, addTimeBonus);
     tutorialController.onAddTimeUsed();
     showTimerToast('Time bonus!');
 
@@ -131,20 +131,20 @@ function initEyeGlassBonus({
   board,
   gameState,
   BONUS_COST,
-  flashScoreWarning,
+  flashGoldWarning,
   getCanUseEyeGlass,
   setCanUseEyeGlass,
   getIsRefilling,
   isFeedbackVisible,
-  deductPoints,
+  deductGold,
   updateBonusAvailability,
   getActiveGame,
 }) {
   return function eyeGlassHandler() {
     const activeGame = getActiveGame?.();
-    const cannotAfford = (gameState?.score ?? 0) < BONUS_COST;
+    const cannotAfford = (gameState?.gold ?? 0) < BONUS_COST;
     if (cannotAfford) {
-      flashScoreWarning();
+      flashGoldWarning();
       return;
     }
     if (!getCanUseEyeGlass() || getIsRefilling()) {
@@ -156,7 +156,7 @@ function initEyeGlassBonus({
     if (activeGame) {
       activeGame.usedAssistBonus = true;
     }
-    deductPoints(BONUS_COST, eyeGlassBonus);
+    deductGold(BONUS_COST, eyeGlassBonus);
     eyeGlassBonus.classList.add('disabled');
 
     const moves = activeGame?.gameSnapshot?.moves ?? [];
@@ -196,10 +196,10 @@ function initBonusFlow({
   timerUI,
   startTimerInterval,
   updateBonusAvailability,
-  deductPoints,
+  deductGold,
   tutorialController,
   showTimerToast,
-  flashScoreWarning,
+  flashGoldWarning,
   BONUS_COST,
   getIsRefilling,
   setIsRefilling,
@@ -218,10 +218,10 @@ function initBonusFlow({
     timerUI,
     startTimerInterval,
     updateBonusAvailability,
-    deductPoints,
+    deductGold,
     tutorialController,
     showTimerToast,
-    flashScoreWarning,
+    flashGoldWarning,
     BONUS_COST,
     getIsRefilling,
     setIsRefilling,
@@ -237,12 +237,12 @@ function initBonusFlow({
     board,
     gameState,
     BONUS_COST,
-    flashScoreWarning,
+    flashGoldWarning,
     getCanUseEyeGlass,
     setCanUseEyeGlass,
     getIsRefilling,
     isFeedbackVisible,
-    deductPoints,
+    deductGold,
     updateBonusAvailability,
     getActiveGame,
   });

@@ -1,14 +1,14 @@
-function getAwardDuration(amount) {
-  // Keep awards snappy even for large amounts
-  return Math.max(
-    Math.round((amount * window.SCORE_STEP_DELAY + 200) * 0.4),
-    280
-  );
-}
-
 const REACTION_TIME_BASE = 4000;
 const REACTION_TIME_SLOW = 10000;
 const SPEED_BONUS_MAX = 300;
+
+function getGoldAwardDuration(amount) {
+  // Keep awards snappy even for large amounts
+  return Math.max(
+    Math.round((amount * window.GOLD_STEP_DELAY + 200) * 0.4),
+    280
+  );
+}
 
 function calculateSpeedBonus(reactionTime = REACTION_TIME_SLOW) {
   const normalized =
@@ -24,12 +24,12 @@ function calculateSpeedBonus(reactionTime = REACTION_TIME_SLOW) {
   return Math.round(normalized * SPEED_BONUS_MAX);
 }
 
-function showScoreFloat(label, amount, duration = getAwardDuration(amount)) {
-  const scoreValueEl = document.getElementById('scoreValue');
-  if (!scoreValueEl) return Promise.resolve();
-  const startRect = scoreValueEl.getBoundingClientRect();
+function showGoldFloat(label, amount, duration = getGoldAwardDuration(amount)) {
+  const goldValueEl = document.getElementById('goldValue');
+  if (!goldValueEl) return Promise.resolve();
+  const startRect = goldValueEl.getBoundingClientRect();
   const float = document.createElement('div');
-  float.className = 'score-float';
+  float.className = 'gold-float';
   float.textContent = `+${amount}  ${label}`;
   const startX = startRect.left + startRect.width / 2;
   const startY = startRect.top - 16;
@@ -62,15 +62,14 @@ function showScoreFloat(label, amount, duration = getAwardDuration(amount)) {
   return animation.finished.then(() => float.remove());
 }
 
-function animateScoreValue(amount, duration = getAwardDuration(amount)) {
+function animateGoldValue(amount, duration = getGoldAwardDuration(amount)) {
   if (!amount || amount <= 0) return Promise.resolve();
   return new Promise((resolve) => {
-    const scoreValueEl = document.getElementById('scoreValue');
-    const scoreDisplay = document.getElementById('scoreDisplay');
-    const start = window.gameState.score;
+    const goldValueEl = document.getElementById('goldValue');
+    const start = window.gameState.gold;
     const target = start + amount;
-    if (scoreValueEl) {
-      scoreValueEl.animate(
+    if (goldValueEl) {
+      goldValueEl.animate(
         [
           { transform: 'scale(1)', opacity: 0.9 },
           { transform: 'scale(1.15)', opacity: 1 },
@@ -89,8 +88,8 @@ function animateScoreValue(amount, duration = getAwardDuration(amount)) {
       const elapsed = now - startTime;
       const ratio = Math.min(1, elapsed / duration);
       const nextValue = Math.round(start + (target - start) * ratio);
-      window.gameState.score = nextValue;
-      if (scoreValueEl) scoreValueEl.textContent = nextValue;
+      window.gameState.gold = nextValue;
+      if (goldValueEl) goldValueEl.textContent = nextValue;
       if (ratio < 1) {
         requestAnimationFrame(tick);
       } else {
@@ -102,7 +101,7 @@ function animateScoreValue(amount, duration = getAwardDuration(amount)) {
   });
 }
 
-async function addScore({
+async function addGold({
   reactionTime = REACTION_TIME_SLOW,
   finalBoardCorrect = false,
   sequenceOrderIssues = 0,
@@ -125,10 +124,10 @@ async function addScore({
   if (!breakdown.length) return;
 
   for (const award of breakdown) {
-    const floatPromise = showScoreFloat(award.label, award.value);
-    const scorePromise = animateScoreValue(award.value);
-    await Promise.all([floatPromise, scorePromise]);
-    await window.delay(window.SCORE_AWARD_PAUSE);
+    const floatPromise = showGoldFloat(award.label, award.value);
+    const goldPromise = animateGoldValue(award.value);
+    await Promise.all([floatPromise, goldPromise]);
+    await window.delay(window.GOLD_AWARD_PAUSE);
   }
 
   window.persistProgress();
@@ -136,11 +135,10 @@ async function addScore({
   window.refreshHomeButtons();
 }
 
-function deductPoints(cost, sourceElement) {
-  const scoreDisplay = document.getElementById('scoreDisplay');
-  const scoreValue = document.getElementById('scoreValue');
+function deductGold(cost, sourceElement) {
+  const goldValue = document.getElementById('goldValue');
   const startRect = sourceElement.getBoundingClientRect();
-  const endRect = scoreValue.getBoundingClientRect();
+  const endRect = goldValue.getBoundingClientRect();
 
   const start = {
     x: startRect.left + startRect.width / 2,
@@ -153,7 +151,7 @@ function deductPoints(cost, sourceElement) {
   };
 
   const float = document.createElement('div');
-  float.className = 'score-float score-float--deduct';
+  float.className = 'gold-float gold-float--deduct';
   float.textContent = `-${cost}`;
   float.style.transform = `translate(${start.x}px, ${start.y}px) scale(1)`;
   document.body.appendChild(float);
@@ -182,16 +180,16 @@ function deductPoints(cost, sourceElement) {
     }
   );
 
-  window.gameState.score -= cost;
+  window.gameState.gold -= cost;
 
   let settled = false;
   const finalizeDeduction = () => {
     if (settled) return;
     settled = true;
     float.remove();
-    scoreValue.textContent = window.gameState.score;
-    scoreDisplay.style.animation = 'scoreDeduct 0.5s ease';
-    setTimeout(() => (scoreDisplay.style.animation = ''), window.ANIM_DELAY);
+    goldValue.textContent = window.gameState.gold;
+    goldValue.style.animation = 'goldDeduct 0.5s ease';
+    setTimeout(() => (goldValue.style.animation = ''), window.ANIM_DELAY);
     updateBonusAvailability();
     window.persistProgress();
     window.refreshHomeButtons();
@@ -201,12 +199,12 @@ function deductPoints(cost, sourceElement) {
   setTimeout(finalizeDeduction, animationDuration + 100);
 }
 
-function flashScoreWarning() {
-  const scoreValueEl = document.getElementById('scoreValue');
-  if (!scoreValueEl) return;
-  scoreValueEl.classList.remove('score-alert');
-  void scoreValueEl.offsetWidth;
-  scoreValueEl.classList.add('score-alert');
+function flashGoldWarning() {
+  const goldValueEl = document.getElementById('goldValue');
+  if (!goldValueEl) return;
+  goldValueEl.classList.remove('gold-alert');
+  void goldValueEl.offsetWidth;
+  goldValueEl.classList.add('gold-alert');
 }
 
 function isFeedbackVisible() {
@@ -226,7 +224,7 @@ function updateBonusAvailability() {
 
   if (!addTime || !eyeGlass) return;
 
-  const canAffordBonus = window.gameState.score >= window.BONUS_COST;
+  const canAffordBonus = window.gameState.gold >= window.BONUS_COST;
   const timerIsRunning = Boolean(window.activeGame?.timer);
   const feedbackActive = isFeedbackVisible();
 
@@ -247,14 +245,14 @@ function updateBonusAvailability() {
 }
 
 export {
-  addScore,
-  showScoreFloat,
-  animateScoreValue,
-  deductPoints,
-  flashScoreWarning,
+  addGold,
+  showGoldFloat,
+  animateGoldValue,
+  deductGold,
+  flashGoldWarning,
   updateBonusAvailability,
   setBonusState,
   isFeedbackVisible,
-  getAwardDuration,
+  getGoldAwardDuration,
   calculateSpeedBonus,
 };
