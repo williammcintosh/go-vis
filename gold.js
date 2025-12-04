@@ -58,38 +58,59 @@ function getStoneCountForRewards() {
 function showGoldFloat(label, amount, duration = getGoldAwardDuration(amount)) {
   const goldValueEl = document.getElementById('goldValue');
   if (!goldValueEl) return Promise.resolve();
+  const goldBadge = document.getElementById('goldBadge');
+  const badgeRect = goldBadge?.getBoundingClientRect();
   const startRect = goldValueEl.getBoundingClientRect();
+  const anchorInsideBadge =
+    Boolean(goldBadge) && Boolean(badgeRect?.width) && Boolean(startRect?.width);
+  const relX = anchorInsideBadge
+    ? startRect.left - badgeRect.left + startRect.width * 0.65
+    : startRect.left + startRect.width / 2;
+  const relY = anchorInsideBadge
+    ? startRect.top - badgeRect.top - 6
+    : startRect.top - 16;
   const float = document.createElement('div');
-  float.className = 'gold-float';
-  float.textContent = `+${amount}  ${label}`;
-  const startX = startRect.left + startRect.width / 2;
-  const startY = startRect.top - 16;
-  float.style.transform = `translate(${startX}px, ${startY}px)`;
-  document.body.appendChild(float);
-  const animation = float.animate(
-    [
-      { transform: `translate(${startX}px, ${startY}px)`, opacity: 0 },
-      {
-        transform: `translate(${startX}px, ${startY}px)`,
-        opacity: 1,
-        offset: 0.0002,
-      },
-      {
-        transform: `translate(${startX}px, ${startY - 20}px)`,
-        opacity: 1,
-        offset: 0.99,
-      },
-      {
-        transform: `translate(${startX}px, ${startY - 25}px)`,
-        opacity: 0,
-      },
-    ],
-    {
-      duration,
-      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-      fill: 'forwards',
-    }
-  );
+  float.className = anchorInsideBadge
+    ? 'gold-float gold-float--anchored'
+    : 'gold-float';
+  float.textContent = `+${amount} ${label}`;
+  if (anchorInsideBadge) {
+    float.style.left = `${relX}px`;
+    float.style.top = `${relY}px`;
+    goldBadge.appendChild(float);
+  } else {
+    float.style.transform = `translate(${relX}px, ${relY}px)`;
+    document.body.appendChild(float);
+  }
+  const keyframes = anchorInsideBadge
+    ? [
+        { transform: 'translateY(0)', opacity: 0 },
+        { transform: 'translateY(0)', opacity: 1, offset: 0.0002 },
+        { transform: 'translateY(-20px)', opacity: 1, offset: 0.99 },
+        { transform: 'translateY(-25px)', opacity: 0 },
+      ]
+    : [
+        { transform: `translate(${relX}px, ${relY}px)`, opacity: 0 },
+        {
+          transform: `translate(${relX}px, ${relY}px)`,
+          opacity: 1,
+          offset: 0.0002,
+        },
+        {
+          transform: `translate(${relX}px, ${relY - 20}px)`,
+          opacity: 1,
+          offset: 0.99,
+        },
+        {
+          transform: `translate(${relX}px, ${relY - 25}px)`,
+          opacity: 0,
+        },
+      ];
+  const animation = float.animate(keyframes, {
+    duration,
+    easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+    fill: 'forwards',
+  });
   return animation.finished.then(() => float.remove());
 }
 
@@ -164,7 +185,13 @@ async function addGold({
   if (!breakdown.length) return;
 
   for (const award of breakdown) {
-    const floatPromise = showGoldFloat(award.label, award.value);
+    const baseLabel = (award.label || '')
+      .replace(/bonus/gi, '')
+      .replace(/correct/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    const decoratedLabel = `${baseLabel.toUpperCase()} \u2705`;
+    const floatPromise = showGoldFloat(decoratedLabel, award.value);
     const goldPromise = animateGoldValue(award.value);
     await Promise.all([floatPromise, goldPromise]);
     await window.delay(window.GOLD_AWARD_PAUSE);

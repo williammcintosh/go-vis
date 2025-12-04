@@ -195,20 +195,28 @@ function createLevelSelectController({
         position: fixed;
         inset: 0;
         background: var(--tan-bg, tan);
-        display: flex;
+        display: none;
         flex-direction: column;
         align-items: center;
         padding: 3.35rem 1.2rem 2.25rem;
         opacity: 0;
         pointer-events: none;
         transition: opacity 200ms ease;
-        overflow-y: auto;
+        overflow-y: hidden;
         overflow-x: hidden;
         z-index: 20;
+        overscroll-behavior: contain;
       }
       #levelSelectScreen.active {
+        display: flex;
         opacity: 1;
         pointer-events: auto;
+      }
+      #levelSelectScreen.level-select--scrollable {
+        overflow-y: auto;
+      }
+      body.level-select-open {
+        overflow: hidden;
       }
       .level-select__inner {
         width: min(720px, 100%);
@@ -272,6 +280,8 @@ function createLevelSelectController({
         flex-direction: column;
         align-items: stretch;
         gap: 0.75rem;
+        box-sizing: border-box;
+        overflow: hidden;
       }
       .level-select__board-card.locked {
         opacity: 0.7;
@@ -283,6 +293,7 @@ function createLevelSelectController({
       .level-select__board-icon {
         position: relative;
         width: 72px;
+        flex-shrink: 0;
       }
       .level-select__board-icon img {
         display: block;
@@ -301,23 +312,40 @@ function createLevelSelectController({
         box-shadow: none;
         cursor: not-allowed;
       }
+      .level-select__board-lock-wrap {
+        position: relative;
+        overflow: hidden;
+      }
       .level-select__board-content {
         flex: 1;
       }
       .level-select__card-row {
         width: 100%;
+        max-width: 100%;
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 1rem;
-        padding-left: 0.5rem;
+        justify-content: space-between;
+        gap: 0.85rem;
+        padding: 0 0.5rem;
         box-sizing: border-box;
+        flex-wrap: nowrap;
+      }
+      .level-select__card-row > * {
+        min-width: 0;
       }
       .level-select__board-card .mode-content.level-select__board-content {
-        flex: 0 0 auto;
+        flex: 1 1 auto;
         display: flex;
         flex-direction: column;
         align-items: center;
+        min-width: 0;
+        gap: 0.25rem;
+        text-align: center;
+        width: 100%;
+      }
+      .level-select__board-card .diffBtn {
+        width: min(100%, 220px);
+        max-width: 100%;
       }
       .level-select__card-row.mode-card--horizontal {
         justify-content: center;
@@ -648,10 +676,10 @@ function createLevelSelectController({
 
     const backBtn = screen.querySelector('[data-action="back"]');
     backBtn?.addEventListener('click', () => {
+      hide();
       if (showScreen && difficultyEl && state.screen) {
         showScreen(difficultyEl, state.screen);
       } else {
-        hide();
         difficultyEl?.classList.add('active');
       }
       introEl?.classList.remove('active');
@@ -725,9 +753,15 @@ function createLevelSelectController({
           return;
         }
         const isOpen = state.selection?.boardSize === size;
-        state.selection = isOpen
-          ? { ...state.selection, boardSize: null }
-          : { ...state.selection, boardSize: size, boardKey };
+        const nextSelection = state.selection ? { ...state.selection } : {};
+        if (isOpen) {
+          nextSelection.boardSize = null;
+          nextSelection.boardKey = null;
+        } else {
+          nextSelection.boardSize = size;
+          nextSelection.boardKey = boardKey;
+        }
+        state.selection = nextSelection;
         renderBoards();
       };
 
@@ -756,6 +790,7 @@ function createLevelSelectController({
       }
       grid.appendChild(card);
     });
+    updateScrollState();
   }
 
   function populateStoneOptions({ boardSize, container }) {
@@ -835,6 +870,7 @@ function createLevelSelectController({
   }
 
   function hide() {
+    document.body.classList.remove('level-select-open');
     state.screen?.classList.remove('active');
   }
 
@@ -866,8 +902,16 @@ function createLevelSelectController({
     difficultyEl?.classList.remove('active');
     introEl?.classList.remove('active');
     screen?.classList.add('active');
+    document.body.classList.add('level-select-open');
     await Promise.all([ensureUnlocks(), ensureTotals()]);
     await renderBoards();
+  }
+
+  function updateScrollState() {
+    const hasOpenDrawer = !!state.screen?.querySelector(
+      '.level-select__drawer.open'
+    );
+    state.screen?.classList.toggle('level-select--scrollable', hasOpenDrawer);
   }
 
   async function resumeLastSelection() {

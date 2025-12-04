@@ -33,7 +33,7 @@ body {
   background: var(--tan-bg);
   font-family: system-ui, sans-serif;
   padding: clamp(0.8rem, 2vh, 1.2rem) 0 clamp(0.8rem, 2vh, 1.2rem);
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 html.no-scroll,
@@ -475,6 +475,13 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   flex-wrap: wrap;
   justify-content: center;
   gap: 1rem;
+}
+
+#intro .mode-grid,
+#difficulty .mode-grid {
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 
 .mode-card {
@@ -1156,8 +1163,7 @@ button:not(.bonus-button):not(#checkBtn):disabled {
 .gold-float,
 .rating-float {
   position: fixed;
-  left: 0;
-  top: 0;
+  top: 8px;
   pointer-events: none;
   font-size: 1.3rem;
   font-weight: 700;
@@ -1166,9 +1172,14 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #4caf50;
+  white-space: nowrap;
+  display: inline-block;
+  text-shadow: -1px 0 #000, 1px 0 #000, 0 1px #000, 0 -1px #000,
+    0 0 6px #fff, 0 0 12px rgba(255, 255, 255, 0.7);
 }
 
 .gold-float {
+  left: 140px;
   color: #4caf50;
 }
 
@@ -1176,12 +1187,24 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   color: #c0392b;
 }
 
+.gold-float--anchored {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
 .rating-float {
+  right: 140px;
   color: #2e7d32;
-  font-size: 1.4rem;
+  font-size: 1.7rem;
   font-weight: 800;
   letter-spacing: 0.06em;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.rating-float--anchored {
+  position: absolute;
+  left: 0;
+  top: 0;
 }
 
 .level-up-overlay {

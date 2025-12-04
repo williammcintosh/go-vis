@@ -83,27 +83,51 @@ function logSkillRatingDebug(data) {
 
 function showRatingGain(amount, targetEl = null) {
   const target = targetEl || document.body;
+  const skillBadge = document.getElementById('skillBadge');
   if (!target) return;
   const rect = target.getBoundingClientRect();
-  const baseY = rect.top + rect.height * 0.8;
+  const badgeRect = skillBadge?.getBoundingClientRect();
+  const anchorInsideBadge =
+    Boolean(skillBadge) && Boolean(badgeRect?.width) && Boolean(rect?.width);
+  const relX = anchorInsideBadge
+    ? rect.left - badgeRect.left - rect.width * 0.85
+    : rect.left + rect.width / 2;
+  const relY = anchorInsideBadge
+    ? rect.top - badgeRect.top - 6
+    : rect.top + rect.height * 0.8;
   const float = document.createElement('div');
-  float.className = 'rating-float';
+  float.className = anchorInsideBadge
+    ? 'rating-float rating-float--anchored'
+    : 'rating-float';
   float.textContent = amount > 0 ? `+${amount}` : `${amount}`;
-  float.style.transform = `translate(${rect.left + rect.width / 2}px, ${baseY}px)`;
-  document.body.appendChild(float);
-  float
-    .animate(
-      [
+  if (anchorInsideBadge) {
+    float.style.left = `${relX}px`;
+    float.style.top = `${relY}px`;
+    skillBadge.appendChild(float);
+  } else {
+    float.style.transform = `translate(${relX}px, ${relY}px)`;
+    document.body.appendChild(float);
+  }
+  const keyframes = anchorInsideBadge
+    ? [
+        { opacity: 0, transform: 'translateY(0) scale(0.95)' },
+        { opacity: 1, transform: 'translateY(0) scale(1.08)' },
+        { opacity: 0, transform: 'translateY(-10px) scale(1)' },
+      ]
+    : [
         { opacity: 0, transform: `${float.style.transform} scale(0.95)` },
         { opacity: 1, transform: `${float.style.transform} scale(1.08)` },
-        { opacity: 0, transform: `${float.style.transform} translateY(-10px)` },
-      ],
-      {
-        duration: amount > 1 ? 950 : 750,
-        easing: 'ease-out',
-        fill: 'forwards',
-      }
-    )
+        {
+          opacity: 0,
+          transform: `${float.style.transform} translateY(-10px) scale(1)`,
+        },
+      ];
+  float
+    .animate(keyframes, {
+      duration: amount > 1 ? 950 : 750,
+      easing: 'ease-out',
+      fill: 'forwards',
+    })
     .finished.finally(() => float.remove());
 }
 
