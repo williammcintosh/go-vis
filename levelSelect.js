@@ -551,6 +551,24 @@ function createLevelSelectController({
     const size = Number(boardSize);
     if (!Number.isFinite(size)) return MIN_STONES;
     if (BOARD_MIN_STONES_CACHE[size]) return BOARD_MIN_STONES_CACHE[size];
+    const unlockStoneCounts = Object.keys(UNLOCKS || {})
+      .map((key) => {
+        const [board, stones] = String(key).split('-').map((n) => Number(n));
+        return { board, stones };
+      })
+      .filter(
+        (entry) =>
+          entry &&
+          Number.isFinite(entry.board) &&
+          Number.isFinite(entry.stones) &&
+          entry.board === size
+      )
+      .map((entry) => entry.stones);
+    if (unlockStoneCounts.length) {
+      const minFromUnlocks = Math.min(...unlockStoneCounts);
+      BOARD_MIN_STONES_CACHE[size] = minFromUnlocks;
+      return minFromUnlocks;
+    }
     const stones = Object.keys(getTotalsForBoard(size))
       .map((n) => Number(n))
       .filter((n) => Number.isFinite(n));
