@@ -15,6 +15,14 @@ let deps = {
   handleTimerFinished: () => {},
 };
 
+const SKIP_STORAGE_KEY = 'goVizEverSkippedTimer';
+let everSkippedTimer = false;
+try {
+  everSkippedTimer = localStorage.getItem(SKIP_STORAGE_KEY) === 'true';
+} catch (_err) {
+  everSkippedTimer = false;
+}
+
 function setupTimer(overrides = {}) {
   deps = { ...deps, ...overrides };
 }
@@ -58,10 +66,18 @@ function initTimerFlow({
     }
     setTimeLeft(config.time);
     timerUI?.setProgress?.(1, { instant: true });
+    timerUI?.setTipVisible?.(false);
   };
 
   const markPlayerSkipped = () => {
     if (!activeGame) return;
+    everSkippedTimer = true;
+    try {
+      localStorage.setItem(SKIP_STORAGE_KEY, 'true');
+    } catch (_err) {
+      /* ignore */
+    }
+    timerUI?.setTipVisible?.(false);
     activeGame.playerSkipped = true;
     freezeBarStateNextFrameFn('postHideFrame', timeLeft, config.time);
     if (activeGame.timeLeftAtSolveEnd == null) {
@@ -140,6 +156,10 @@ function createTimerUI() {
   const container = document.getElementById('timerContainer');
   const bar = document.getElementById('timerBar');
   const checkBtn = document.getElementById('checkBtn');
+  const tip = document.createElement('div');
+  tip.className = 'timer-tip';
+  tip.textContent = 'Tip: Double tap to skip!';
+  if (container) container.appendChild(tip);
 
   const setProgress = (ratio, { instant = false } = {}) => {
     const clamped = Math.max(0, Math.min(1, ratio));
@@ -171,9 +191,23 @@ function createTimerUI() {
   const reset = () => {
     setProgress(1, { instant: true });
     showTimer();
+    setTipVisible(false);
   };
 
-  return { container, bar, checkBtn, setProgress, showTimer, showCheck, reset };
+  const setTipVisible = (show) => {
+    tip.classList.toggle('is-visible', Boolean(show));
+  };
+
+  return {
+    container,
+    bar,
+    checkBtn,
+    setProgress,
+    showTimer,
+    showCheck,
+    reset,
+    setTipVisible,
+  };
 }
 
 function freezeBarState(reason, timeLeft, totalTime) {
@@ -314,6 +348,11 @@ function runTimerTick() {
   const activeGame = deps.getActiveGame();
   const ratio = config.time ? timeLeft / config.time : 0;
   timerUI?.setProgress?.(ratio);
+  if (!everSkippedTimer && ratio > 0 && ratio <= 0.2) {
+    timerUI?.setTipVisible?.(true);
+  } else {
+    timerUI?.setTipVisible?.(false);
+  }
   if (activeGame) {
     const clamped = Math.max(0, Math.min(1, ratio));
     activeGame.lastTimerRatio = clamped;

@@ -12,6 +12,7 @@
   --green: #4caf50;
   --green-hover: #43a047;
   --tan-bg: tan;
+  --badge-scale: 1;
 }
 
 /* ========= General Layout ========= */
@@ -94,6 +95,25 @@ body.no-scroll {
 }
 #timerBar.no-transition::after {
   transition: none !important;
+}
+
+.timer-tip {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0b360f;
+  text-shadow: -1px 0 #fff, 1px 0 #fff, 0 1px #fff, 0 -1px #fff;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.timer-tip.is-visible {
+  opacity: 1;
 }
 
 #checkBtn {
@@ -241,8 +261,14 @@ button.bonus-button.disabled .bonus-cost {
   width: var(--content-width);
   max-width: var(--content-width);
   aspect-ratio: 1 / 1;
-  margin: clamp(1.4rem, 6vh, 2.6rem) auto 0;
+  margin: clamp(2.6rem, 9vh, 4rem) auto 0;
   background: var(--tan-bg);
+}
+
+@media (max-width: 600px) {
+  #board {
+    margin: clamp(4.2rem, 14vh, 5.8rem) auto 0;
+  }
 }
 
 /* grid lines */
@@ -811,8 +837,8 @@ button:not(.bonus-button):not(#checkBtn):disabled {
 
 #levelInfo {
   text-align: center;
-  width: 200px;
-  max-width: 96vw;
+  width: clamp(120px, 25vw, 180px);
+  max-width: 70vw;
 }
 
 #skillBadge {
@@ -822,13 +848,14 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   z-index: 200;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(-6px);
+  transform: translateY(-6px) scale(var(--badge-scale));
   transition: opacity 180ms ease, transform 180ms ease;
+  transform-origin: top right;
 }
 
 #skillBadge.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(var(--badge-scale));
 }
 
 .skill-badge__frame {
@@ -898,13 +925,14 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   z-index: 200;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(-6px);
+  transform: translateY(-6px) scale(var(--badge-scale));
   transition: opacity 180ms ease, transform 180ms ease;
+  transform-origin: top left;
 }
 
 #goldBadge.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(var(--badge-scale));
 }
 
 .gold-badge__frame {
@@ -986,6 +1014,22 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   .gold-badge__core {
     min-width: 76px;
     padding: 0.38rem 0.75rem;
+  }
+}
+
+@media (max-width: 400px) {
+  :root {
+    /* Scale badges down smoothly from 400px → 330px */
+    --badge-scale: clamp(0.45, 0.45 + ((100vw - 330px) / 70) * 0.55, 1);
+  }
+}
+
+@media (min-width: 600px) {
+  #goldBadge {
+    left: 80px;
+  }
+  #skillBadge {
+    right: 80px;
   }
 }
 
@@ -1174,8 +1218,8 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   color: #4caf50;
   white-space: nowrap;
   display: inline-block;
-  text-shadow: -1px 0 #000, 1px 0 #000, 0 1px #000, 0 -1px #000,
-    0 0 6px #fff, 0 0 12px rgba(255, 255, 255, 0.7);
+  text-shadow: -1px 0 #000, 1px 0 #000, 0 1px #000, 0 -1px #000, 0 0 6px #fff,
+    0 0 12px rgba(255, 255, 255, 0.7);
 }
 
 .gold-float {
@@ -1331,6 +1375,7 @@ button:not(.bonus-button):not(#checkBtn):disabled {
     --layout-width: min(90vw, 360px);
     --main-width: var(--layout-width);
     --max-board: var(--layout-width);
+    --content-width: calc(var(--layout-width) * 0.82);
   }
 
   body {
@@ -1346,7 +1391,7 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   }
 
   #board {
-    margin-top: 1rem !important;
+    margin: 2rem !important;
   }
 
   #feedback {
