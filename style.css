@@ -1215,16 +1215,16 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   z-index: 9999;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #4caf50;
   white-space: nowrap;
   display: inline-block;
-  text-shadow: -1px 0 #000, 1px 0 #000, 0 1px #000, 0 -1px #000, 0 0 6px #fff,
-    0 0 12px rgba(255, 255, 255, 0.7);
 }
 
 .gold-float {
   left: 140px;
-  color: #4caf50;
+  color: #f4c14f;
+  text-shadow: -1px 0 #111, 1px 0 #111, 0 1px #111, 0 -1px #111,
+    0 0 6px #f9d870, 0 0 12px rgba(249, 216, 112, 0.85),
+    0 0 18px rgba(249, 216, 112, 0.65);
 }
 
 .gold-float--deduct {
@@ -1263,10 +1263,12 @@ button:not(.bonus-button):not(#checkBtn):disabled {
 
 .rating-float {
   right: 140px;
-  color: #4caf50;
+  color: #111;
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: 0.06em;
+  text-shadow: -1px 0 #fdfbf6, 1px 0 #fdfbf6, 0 1px #fdfbf6, 0 -1px #fdfbf6,
+    0 0 10px rgba(255, 255, 255, 0.9);
 }
 
 .rating-float--anchored {
