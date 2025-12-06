@@ -7,6 +7,8 @@ const MAX_RATING = 2500;
 const MIN_STONES = 5;
 const SKILL_DEBUG_KEY = 'skill_rating_debug';
 
+let activeRatingStack = null;
+
 const LEVEL_THRESHOLDS = [
   { level: 2, rating: 504 },
   { level: 3, rating: 540 },
@@ -101,22 +103,24 @@ function showRatingGain(amount, targetEl = null) {
   float.style.right = 'auto';
   float.style.transform = 'translateX(-50%)';
   document.body.appendChild(float);
-  return {
+  const stack = {
     container: float,
     addLine: (text) => {
       const line = document.createElement('div');
       line.textContent = text;
       float.appendChild(line);
     },
-    fadeOut: (duration = 450) =>
-      new Promise((resolve) => {
-        float.classList.add('fade-out');
-        setTimeout(() => {
-          float.remove();
-          resolve();
-        }, duration + 80);
-      }),
   };
+  clearSkillRewardText();
+  activeRatingStack = stack;
+  return stack;
+}
+
+function clearSkillRewardText() {
+  if (activeRatingStack?.container?.remove) {
+    activeRatingStack.container.remove();
+  }
+  activeRatingStack = null;
 }
 
 function writeSkillDebug(snapshot, level) {
@@ -645,8 +649,6 @@ function createDifficultyOutcomeRecorder({
           renderSkillRating(skillRatingEl, currentDisplay, currentDisplay);
           await new Promise((resolve) => setTimeout(resolve, stepDelay));
         }
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        await stack?.fadeOut?.(450);
       })();
     }
 
@@ -683,6 +685,7 @@ export {
   loadSkillDebugState,
   renderSkillRating,
   logSkillRatingDebug,
+  clearSkillRewardText,
   showRatingGain,
   writeSkillDebug,
   createDifficultyOutcomeRecorder,

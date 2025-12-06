@@ -5,6 +5,7 @@ import {
   MIN_STONES,
   renderSkillRating,
   logSkillRatingDebug,
+  clearSkillRewardText,
   writeSkillDebug,
   createDifficultyOutcomeRecorder,
 } from './difficulty.js';
@@ -40,6 +41,7 @@ import {
   updateBonusAvailability,
   isFeedbackVisible,
   calculateSpeedBonus,
+  clearGoldRewardText,
 } from './gold.js';
 window.updateBonusAvailability = updateBonusAvailability;
 import { createTutorialController } from './tutorial.js';
@@ -118,6 +120,11 @@ function setScrollLock(isLocked) {
   document.documentElement.classList[method]('no-scroll');
   document.body.classList[method]('no-scroll');
 }
+
+const clearRewardTextDisplays = () => {
+  clearGoldRewardText();
+  clearSkillRewardText();
+};
 
 function getActiveStoneCount(fallbackConfig) {
   const fromActive = Number(
@@ -232,6 +239,7 @@ function normalizeProgress(progress = {}) {
 
 window.progress = normalizeProgress(window.progress);
 const ANIM_DELAY = 600;
+const NEXT_BUTTON_ENABLE_DELAY = 800;
 const DEDUCT_TARGET_ID = 'goldValue';
 const POSITION_BONUS = 200;
 const COLOR_BONUS = 200;
@@ -239,6 +247,7 @@ const SEQUENCE_BONUS = 250;
 const GOLD_STEP_DELAY = 2; // base ms between gold increments
 const GOLD_AWARD_PAUSE = 90;
 window.ANIM_DELAY = ANIM_DELAY;
+window.NEXT_BUTTON_ENABLE_DELAY = NEXT_BUTTON_ENABLE_DELAY;
 window.POSITION_BONUS = POSITION_BONUS;
 window.COLOR_BONUS = COLOR_BONUS;
 window.SEQUENCE_BONUS = SEQUENCE_BONUS;
@@ -531,6 +540,7 @@ levelSelectController = createLevelSelectController({
 intro.classList.add('active');
 
 document.getElementById('homeBtn').onclick = () => {
+  clearRewardTextDisplays();
   levelSelectController?.hide();
   showScreen(intro, difficulty);
 };
@@ -564,6 +574,7 @@ const nextBtn = document.getElementById('nextBtn');
 const homeBtn2 = document.getElementById('homeBtn2');
 
 homeBtn2.addEventListener('click', () => {
+  clearRewardTextDisplays();
   showHomeScreen({
     feedback: document.getElementById('feedback'),
     updateBonusAvailability,
@@ -581,6 +592,7 @@ homeBtn2.addEventListener('click', () => {
 });
 
 nextBtn.onclick = async () => {
+  clearRewardTextDisplays();
   await prepareNextChallenge({
     feedback: document.getElementById('feedback'),
     updateBonusAvailability,

@@ -1249,10 +1249,6 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   transform: none !important;
 }
 
-.gold-float-stack.fade-out {
-  animation: goldStackFade 450ms ease forwards;
-}
-
 .rating-float-stack {
   display: flex;
   flex-direction: column;
@@ -1263,15 +1259,6 @@ button:not(.bonus-button):not(#checkBtn):disabled {
 
 .rating-float-stack.rating-float--anchored {
   transform: none !important;
-}
-
-.rating-float-stack.fade-out {
-  animation: goldStackFade 450ms ease forwards;
-}
-
-@keyframes goldStackFade {
-  from { opacity: 1; }
-  to { opacity: 0; }
 }
 
 .rating-float {

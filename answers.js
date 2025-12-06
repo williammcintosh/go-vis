@@ -244,9 +244,15 @@ function checkAnswers({
     const nextBtn = document.getElementById('nextBtn');
     const levelOverlayActive = () =>
       Boolean(document.querySelector('.level-up-overlay'));
+    const enableNextWhenAllowed = () => {
+      if (!levelOverlayActive()) {
+        nextBtn.disabled = false;
+      }
+    };
 
     // Add gold with delay for animation sync
     nextBtn.disabled = true;
+    setTimeout(enableNextWhenAllowed, window.NEXT_BUTTON_ENABLE_DELAY || 0);
     setTimeout(() => {
       addGold({
         reactionTime: window.activeGame?.reactionTime || 10000,
@@ -254,11 +260,7 @@ function checkAnswers({
         sequenceOrderIssues,
         positionsReward,
         colorsReward,
-      }).finally(() => {
-        if (!levelOverlayActive()) {
-          nextBtn.disabled = false;
-        }
-      });
+      }).finally(enableNextWhenAllowed);
     }, window.ANIM_DELAY);
   } else {
     if (

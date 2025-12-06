@@ -5,6 +5,8 @@ const TARGET_THREE_GAMES_TOTAL = 100;
 const TARGET_AVG_PER_GAME = TARGET_THREE_GAMES_TOTAL / 3;
 window.SPEED_BONUS_MAX = SPEED_BONUS_MAX;
 
+let activeGoldStack = null;
+
 function getGoldAwardDuration(amount) {
   // Keep awards snappy even for large amounts
   return Math.max(
@@ -96,34 +98,33 @@ function showGoldFloatStack(labels) {
   const badgeRect = goldBadge?.getBoundingClientRect();
   const startRect = goldValueEl.getBoundingClientRect();
   const relX = badgeRect
-    ? badgeRect.left + badgeRect.width / 2 - 120
-    : startRect.left + startRect.width / 2 - 120;
-  const relY = badgeRect ? badgeRect.bottom - 0 : startRect.top - 0;
+    ? badgeRect.left + badgeRect.width / 2 + 20
+    : startRect.left + startRect.width / 2 + 20;
+  const relY = badgeRect ? badgeRect.bottom + 10 : startRect.top + 10;
   const container = document.createElement('div');
   container.className = 'gold-float gold-float-stack';
   container.style.fontSize = 'clamp(0.5rem, 2vw + 0.4rem, 1.35rem)';
-  container.style.transform = `translate(${relX}px, ${relY}px) translateX(-50%)`;
+  container.style.position = 'absolute';
+  container.style.left = `${relX}px`;
+  container.style.top = `${relY}px`;
+  container.style.transform = 'translateX(-50%)';
   const addLine = (text) => {
     const line = document.createElement('div');
     line.textContent = text;
     container.appendChild(line);
   };
+  clearGoldRewardText();
+  activeGoldStack = { container, addLine };
   (labels || []).forEach((text) => addLine(text));
   document.body.appendChild(container);
   return { container, addLine };
 }
 
-function fadeOutAndRemove(el, duration = 300) {
-  if (!el) return Promise.resolve();
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      el.classList.add('fade-out');
-    });
-    setTimeout(() => {
-      el.remove();
-      resolve();
-    }, duration + 80);
-  });
+function clearGoldRewardText() {
+  if (activeGoldStack?.container?.remove) {
+    activeGoldStack.container.remove();
+  }
+  activeGoldStack = null;
 }
 
 function animateGoldValue(amount, duration = getGoldAwardDuration(amount)) {
@@ -226,9 +227,6 @@ async function addGold({
     await goldPromise;
     await window.delay(window.GOLD_AWARD_PAUSE);
   }
-
-  await window.delay(400);
-  await fadeOutAndRemove(stack?.container, 320);
 
   window.persistProgress();
   updateBonusAvailability();
@@ -356,4 +354,5 @@ export {
   isFeedbackVisible,
   getGoldAwardDuration,
   calculateSpeedBonus,
+  clearGoldRewardText,
 };
