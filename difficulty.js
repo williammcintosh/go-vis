@@ -109,14 +109,14 @@ function showRatingGain(amount, targetEl = null, options = {}) {
   float.style.right = 'auto';
   float.style.transform = 'translateX(-50%)';
   const addLine = (text) => {
-    if (skillRewardsBlocked && !forceRender) {
-      pendingRatingLines.push(text);
-      return;
-    }
-    const line = document.createElement('div');
-    line.textContent = text;
-    float.appendChild(line);
-  };
+  if (skillRewardsBlocked && !forceRender) {
+    pendingRatingLines.push(text);
+    return;
+  }
+  const line = document.createElement('div');
+  line.textContent = text;
+  float.appendChild(line);
+};
 
   if (skillRewardsBlocked && !forceRender) {
     pendingRatingTarget = target;
@@ -680,11 +680,13 @@ function createDifficultyOutcomeRecorder({
       ) {
         steps.push({ label: '75% SKIP \u2705 +2', value: 2 });
       }
-      if (
-        usedSpeedBoost ||
-        ratingResult.speedBonusUsed ||
-        maxSpeedBonusAchieved
-      ) {
+      const showSpeedStep =
+        !isRetry &&
+        rewardRuleTriggered !== 'retry' &&
+        (usedSpeedBoost ||
+          ratingResult.speedBonusUsed ||
+          maxSpeedBonusAchieved);
+      if (showSpeedStep) {
         steps.push({ label: 'SPEED \u2705 +1', value: 1 });
       }
       const stack = showRatingGain(1, skillRatingEl);

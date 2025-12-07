@@ -11,19 +11,30 @@
   </head>
   <body>
     <body>
-      <div id="goldBadge" class="gold-badge" aria-live="polite">
-        <div class="gold-badge__frame">
-          <div class="gold-badge__core">
-            <span id="goldValue" class="gold-badge__value">0</span>
-            <span class="gold-badge__label">Gold</span>
+      <div id="topBar">
+        <div id="goldBadge" class="gold-badge badge" aria-live="polite">
+          <div class="gold-badge__frame">
+            <div class="gold-badge__core">
+              <span id="goldValue" class="gold-badge__value">0</span>
+              <span class="gold-badge__label">Gold</span>
+            </div>
           </div>
         </div>
-      </div>
-      <div id="skillBadge" class="skill-badge" aria-live="polite">
-        <div class="skill-badge__frame">
-          <div class="skill-badge__core">
-            <span id="skillRatingText" class="skill-badge__value">--</span>
-            <span class="skill-badge__label">Skill</span>
+        <div id="gameHeader">
+          <div class="header-block header-center">
+            <div id="modeIndicatorText" class="mode-chip">Position Mode</div>
+            <p id="levelInfo">
+              <span id="levelText"></span><br />
+              <span id="roundText"></span>
+            </p>
+          </div>
+        </div>
+        <div id="skillBadge" class="skill-badge badge" aria-live="polite">
+          <div class="skill-badge__frame">
+            <div class="skill-badge__core">
+              <span id="skillRatingText" class="skill-badge__value">--</span>
+              <span class="skill-badge__label">Skill</span>
+            </div>
           </div>
         </div>
       </div>
@@ -88,17 +99,6 @@
 
       <div id="mainGame">
         <div class="game-wrapper">
-          <div id="gameHeader">
-            <div class="header-block header-gold-spacer" aria-hidden="true"></div>
-            <div class="header-block header-center">
-              <div id="modeIndicatorText" class="mode-chip">Position Mode</div>
-              <p id="levelInfo">
-                <span id="levelText"></span><br />
-                <span id="roundText"></span>
-              </p>
-            </div>
-            <div class="header-block header-rating"></div>
-          </div>
           <div id="board"></div>
           <div id="timerContainer" class="is-timing" aria-live="polite">
             <div id="timerBar" role="progressbar" aria-label="Time remaining"></div>
