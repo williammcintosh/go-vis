@@ -976,10 +976,13 @@ function createLevelSelectController({
     const attempts = Number.isFinite(attemptsRaw)
       ? Math.max(0, attemptsRaw - 1)
       : 0;
-    const header = `${boardSize}x${boardSize} board • ${stoneCount} stones<br>challenge ${challengeNumber}/${
-      total || '?'
-    } • attempts ${attempts}`;
-    levelText.innerHTML = header;
+    const headerLines = [
+      `${boardSize}x${boardSize} board`,
+      `${stoneCount} stones`,
+      `challenge ${challengeNumber}/${total || '?'}`,
+      `attempts ${attempts}`,
+    ];
+    levelText.innerHTML = headerLines.join('<br>');
     roundText.textContent = '';
   }
 

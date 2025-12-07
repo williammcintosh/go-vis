@@ -46,12 +46,17 @@ function setupGameState({
     const boardLabel = resolvedBoardSize
       ? `${resolvedBoardSize}x${resolvedBoardSize} board`
       : '';
-    levelTextEl.textContent = boardLabel;
-  }
-  if (roundTextEl) {
-    roundTextEl.textContent = plannedPuzzle?.stoneCount
+    const stonesLabel = plannedPuzzle?.stoneCount
       ? `${plannedPuzzle.stoneCount} stones`
       : '';
+    const challengeLabel = 'challenge 1/?';
+    const attemptsLabel = 'attempts 0';
+    levelTextEl.innerHTML = [boardLabel, stonesLabel, challengeLabel, attemptsLabel]
+      .filter((line) => line !== '')
+      .join('<br>');
+  }
+  if (roundTextEl) {
+    roundTextEl.textContent = '';
   }
 
   updateModeIndicator(mode);

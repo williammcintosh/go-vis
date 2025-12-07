@@ -64,6 +64,7 @@ import {
   showHomeScreen,
   prepareNextChallenge,
   resetGameStateUI,
+  hideFeedbackPanel,
 } from './uiHelpers.js';
 
 const intro = document.getElementById('intro');
@@ -611,6 +612,7 @@ async function startGame(mode) {
   setScrollLock(true);
   showGoldBadge();
   showSkillBadge();
+  hideFeedbackPanel(document.getElementById('feedback'));
   const manualSelection = levelSelectController?.getSelection?.();
   if (manualSelection) {
     nextPuzzleSuggestion = {
@@ -707,7 +709,7 @@ async function startGame(mode) {
     timerUI,
     startTimerInterval,
     updateBonusAvailability,
-    deductPoints: deductGold,
+    deductGold,
     tutorialController,
     showTimerToast,
     flashGoldWarning,
