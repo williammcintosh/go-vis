@@ -1212,7 +1212,7 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   font-size: 1.3rem;
   font-weight: 700;
   opacity: 0;
-  z-index: 9999;
+  z-index: 9995;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
@@ -1288,7 +1288,7 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   font-weight: 800;
   letter-spacing: 0.08em;
   border-radius: 12px;
-  z-index: 140;
+  z-index: 12010;
   pointer-events: auto;
   opacity: 0;
   text-transform: uppercase;

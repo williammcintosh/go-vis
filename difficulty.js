@@ -1,3 +1,5 @@
+import { setGoldRewardBlocked } from './gold.js';
+
 const RATING_KEY = 'skill_rating';
 const SKILL_PROGRESS_KEY = 'skill_progress';
 const DEFAULT_RATING = 0;
@@ -8,6 +10,9 @@ const MIN_STONES = 5;
 const SKILL_DEBUG_KEY = 'skill_rating_debug';
 
 let activeRatingStack = null;
+let pendingRatingLines = [];
+let pendingRatingTarget = null;
+let skillRewardsBlocked = false;
 
 const LEVEL_THRESHOLDS = [
   { level: 2, rating: 504 },
@@ -83,7 +88,8 @@ function logSkillRatingDebug(data) {
   console.log('[SkillRating]', JSON.stringify(data, null, 2));
 }
 
-function showRatingGain(amount, targetEl = null) {
+function showRatingGain(amount, targetEl = null, options = {}) {
+  const { forceRender = false, initialLines = [] } = options;
   const target = targetEl || document.body;
   const skillBadge = document.getElementById('skillBadge');
   if (!target) return;
@@ -102,17 +108,27 @@ function showRatingGain(amount, targetEl = null) {
   float.style.top = `${relY}px`;
   float.style.right = 'auto';
   float.style.transform = 'translateX(-50%)';
-  document.body.appendChild(float);
-  const stack = {
-    container: float,
-    addLine: (text) => {
-      const line = document.createElement('div');
-      line.textContent = text;
-      float.appendChild(line);
-    },
+  const addLine = (text) => {
+    if (skillRewardsBlocked && !forceRender) {
+      pendingRatingLines.push(text);
+      return;
+    }
+    const line = document.createElement('div');
+    line.textContent = text;
+    float.appendChild(line);
   };
+
+  if (skillRewardsBlocked && !forceRender) {
+    pendingRatingTarget = target;
+    pendingRatingLines.push(...initialLines);
+    return { addLine, container: null };
+  }
+
+  document.body.appendChild(float);
+  const stack = { container: float, addLine };
   clearSkillRewardText();
   activeRatingStack = stack;
+  initialLines.forEach((text) => addLine(text));
   return stack;
 }
 
@@ -121,6 +137,33 @@ function clearSkillRewardText() {
     activeRatingStack.container.remove();
   }
   activeRatingStack = null;
+  pendingRatingLines = [];
+  pendingRatingTarget = null;
+}
+
+function setSkillRewardBlocked(blocked) {
+  skillRewardsBlocked = blocked;
+  if (blocked) {
+    if (activeRatingStack?.container) {
+      activeRatingStack.container.style.visibility = 'hidden';
+    }
+    return;
+  }
+
+  if (activeRatingStack?.container) {
+    activeRatingStack.container.style.visibility = '';
+  }
+
+  if (pendingRatingLines.length) {
+    const target =
+      pendingRatingTarget ||
+      document.getElementById('skillBadge') ||
+      document.body;
+    const linesToShow = [...pendingRatingLines];
+    pendingRatingLines = [];
+    pendingRatingTarget = null;
+    showRatingGain(0, target, { forceRender: true, initialLines: linesToShow });
+  }
 }
 
 function writeSkillDebug(snapshot, level) {
@@ -266,6 +309,8 @@ function triggerLevelOverlay(level) {
 
   const overlay = document.createElement('div');
   overlay.className = 'level-up-overlay';
+  setGoldRewardBlocked(true);
+  setSkillRewardBlocked(true);
   const msg = document.createElement('div');
   msg.className = 'level-up-overlay__text';
   msg.textContent = `Level ${level} now unlocked!`;
@@ -295,6 +340,8 @@ function triggerLevelOverlay(level) {
       nextBtn.disabled = false;
       nextBtn.classList.remove('next-disabled-by-levelup');
     }
+    setGoldRewardBlocked(false);
+    setSkillRewardBlocked(false);
   });
 
   goBtn.addEventListener('click', () => {
@@ -306,6 +353,8 @@ function triggerLevelOverlay(level) {
       nextBtn.disabled = false;
       nextBtn.classList.remove('next-disabled-by-levelup');
     }
+    setGoldRewardBlocked(false);
+    setSkillRewardBlocked(false);
   });
 
   buttonsRow.appendChild(goBtn);

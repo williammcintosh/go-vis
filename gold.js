@@ -6,6 +6,8 @@ const TARGET_AVG_PER_GAME = TARGET_THREE_GAMES_TOTAL / 3;
 window.SPEED_BONUS_MAX = SPEED_BONUS_MAX;
 
 let activeGoldStack = null;
+let pendingGoldLines = [];
+let goldRewardsBlocked = false;
 
 function getGoldAwardDuration(amount) {
   // Keep awards snappy even for large amounts
@@ -91,7 +93,8 @@ function showGoldFloat(label, amount, duration = getGoldAwardDuration(amount)) {
   return animation.finished.then(() => float.remove());
 }
 
-function showGoldFloatStack(labels) {
+function showGoldFloatStack(labels = [], options = {}) {
+  const { forceRender = false } = options;
   const goldValueEl = document.getElementById('goldValue');
   if (!goldValueEl) return null;
   const goldBadge = document.getElementById('goldBadge');
@@ -109,13 +112,23 @@ function showGoldFloatStack(labels) {
   container.style.top = `${relY}px`;
   container.style.transform = 'translateX(-50%)';
   const addLine = (text) => {
+    if (goldRewardsBlocked && !forceRender) {
+      pendingGoldLines.push(text);
+      return;
+    }
     const line = document.createElement('div');
     line.textContent = text;
     container.appendChild(line);
   };
+
+  if (goldRewardsBlocked && !forceRender) {
+    pendingGoldLines.push(...labels);
+    return { addLine, container: null };
+  }
+
   clearGoldRewardText();
   activeGoldStack = { container, addLine };
-  (labels || []).forEach((text) => addLine(text));
+  labels.forEach((text) => addLine(text));
   document.body.appendChild(container);
   return { container, addLine };
 }
@@ -125,6 +138,26 @@ function clearGoldRewardText() {
     activeGoldStack.container.remove();
   }
   activeGoldStack = null;
+  pendingGoldLines = [];
+}
+
+function setGoldRewardBlocked(blocked) {
+  goldRewardsBlocked = blocked;
+  if (blocked) {
+    if (activeGoldStack?.container) {
+      activeGoldStack.container.style.visibility = 'hidden';
+    }
+    return;
+  }
+
+  if (activeGoldStack?.container) {
+    activeGoldStack.container.style.visibility = '';
+  }
+  if (pendingGoldLines.length) {
+    const linesToShow = [...pendingGoldLines];
+    pendingGoldLines = [];
+    showGoldFloatStack(linesToShow, { forceRender: true });
+  }
 }
 
 function animateGoldValue(amount, duration = getGoldAwardDuration(amount)) {
@@ -355,4 +388,5 @@ export {
   getGoldAwardDuration,
   calculateSpeedBonus,
   clearGoldRewardText,
+  setGoldRewardBlocked,
 };
