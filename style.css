@@ -402,7 +402,7 @@ button.bonus-button.disabled .bonus-cost {
 
 #feedbackMsg {
   font-size: 1.5rem;
-  margin: 0.5rem 0 !important;
+  margin: 0 0 0.5rem 0;
   padding: 0;
 }
 
@@ -449,7 +449,7 @@ button.bonus-button.disabled .bonus-cost {
   }
   #feedbackMsg {
     align-self: center;
-    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-size: 1.5rem;
     margin-top: 0;
   }
   #feedback .feedback-bottom-row {
@@ -1258,27 +1258,6 @@ button:not(.bonus-button):not(#checkBtn) {
   box-sizing: border-box;
 }
 
-@media (max-height: 640px) {
-  #nextBtn,
-  #homeBtn2 {
-    width: min(40vw, 360px) !important;
-    max-width: 100% !important;
-    box-sizing: border-box;
-  }
-}
-
-@media (max-height: 640px) {
-  /* Force compact widths only inside the feedback modal to override global button sizing */
-  #feedback.modal-compact #nextBtn,
-  #feedback.modal-compact #homeBtn2,
-  #feedback.show #nextBtn,
-  #feedback.show #homeBtn2 {
-    width: min(40vw, 360px) !important;
-    max-width: 100% !important;
-    box-sizing: border-box;
-  }
-}
-
 .gold-float,
 .rating-float {
   position: fixed;
@@ -1420,7 +1399,7 @@ button:not(.bonus-button):not(#checkBtn) {
     flex-direction: column;
     gap: 8px;
     max-height: 30vh;
-    padding: 8px;
+    padding: 0.75rem;
     font-size: 0.9em;
   }
   #feedback .feedback-bottom-row {
@@ -1437,46 +1416,6 @@ button:not(.bonus-button):not(#checkBtn) {
   #board {
     margin-top: 8px;
     margin-bottom: 8px;
-  }
-}
-
-@media (max-height: 640px) {
-  #feedback {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    max-width: 100%;
-    padding: 0.75rem;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-  #feedbackMsg {
-    margin: 0 0 0.5rem 0;
-    text-align: center;
-  }
-  #goldPopup {
-    width: 100%;
-    text-align: center;
-  }
-  #feedback .feedback-bottom-row {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-    width: 100%;
-    max-width: 100%;
-    margin-top: 0.5rem;
-    box-sizing: border-box;
-  }
-  #nextBtn,
-  #homeBtn2 {
-    width: 100%;
-    max-width: 100%;
-    padding: 0.75rem 0;
-    font-size: 1rem;
-    box-sizing: border-box;
   }
 }
 
