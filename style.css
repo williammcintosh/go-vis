@@ -379,14 +379,16 @@ button.bonus-button.disabled .bonus-cost {
   top: calc(72%);
   background: rgba(245, 245, 220, 0.95);
   border-radius: 15px;
-  padding: 0.5rem;
+  padding: 0.75rem;
   text-align: center;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   width: 100%;
-  max-width: var(--max-board);
+  max-width: 100%;
+  box-sizing: border-box;
   display: none;
   z-index: 10;
   transition: opacity 0.3s ease;
+  overflow: hidden;
 }
 
 #feedback.show {
@@ -424,6 +426,8 @@ button.bonus-button.disabled .bonus-cost {
 #feedback .feedback-bottom-row {
   display: flex;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   gap: 0.5rem;
   justify-content: center;
 }
@@ -435,8 +439,46 @@ button.bonus-button.disabled .bonus-cost {
   margin: 0.5rem auto;
 }
 
+@media (min-height: 640px) {
+  #feedback.show {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: clamp(0.5rem, 1.5vh, 0.9rem);
+  }
+  #feedbackMsg {
+    align-self: center;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    margin-top: 0;
+  }
+  #feedback .feedback-bottom-row {
+    display: grid;
+    grid-template-rows: auto auto;
+    grid-template-columns: 1fr;
+    gap: clamp(0.6rem, 1.8vh, 1rem);
+    width: 100%;
+    justify-items: center;
+  }
+  #feedback .feedback-bottom-row button {
+    width: clamp(70%, 72vw, 100%);
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+    padding: 14px 0;
+    min-height: 58px;
+    height: 58px;
+    font-size: clamp(16px, 4vw, 20px);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+}
+
 /* ========= Global Button Styling ========= */
-button:not(.bonus-button):not(#checkBtn) {
+button:not(.bonus-button):not(#checkBtn):not(#nextBtn):not(#homeBtn2) {
   width: min(50vw, 400px);
   padding: 14px 0;
   font-size: clamp(16px, 5vw, 22px);
@@ -459,6 +501,18 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   color: #6b6b6b;
   box-shadow: none;
   cursor: not-allowed;
+}
+button:not(.bonus-button):not(#checkBtn) {
+  width: min(40vw, 400px);
+  padding: 14px 0;
+  font-size: clamp(16px, 5vw, 22px);
+  background: linear-gradient(180deg, #66bb6a 0%, #43a047 100%);
+  color: white;
+  border: 2px solid rgba(70, 116, 65, 0.7);
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 /* ========= Intro & Difficulty Screens ========= */
@@ -1162,6 +1216,69 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   z-index: 10;
 }
 
+/* Compact feedback layout when modal-compact is applied */
+#feedback.modal-compact {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 100%;
+  padding: 0.75rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: rgba(245, 245, 220, 0.95);
+  border-radius: 15px;
+}
+#feedback.modal-compact #feedbackMsg {
+  margin: 0 0 0.5rem 0;
+  text-align: center;
+}
+#feedback.modal-compact #goldPopup {
+  width: 100%;
+  text-align: center;
+}
+#feedback.modal-compact .feedback-bottom-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 0.5rem;
+  box-sizing: border-box;
+  padding: 0;
+}
+#feedback.modal-compact #nextBtn,
+#feedback.modal-compact #homeBtn2 {
+  width: min(40vw, 360px) !important;
+  max-width: 100%;
+  padding: 0.75rem 0;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+@media (max-height: 640px) {
+  #nextBtn,
+  #homeBtn2 {
+    width: min(40vw, 360px) !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-height: 640px) {
+  /* Force compact widths only inside the feedback modal to override global button sizing */
+  #feedback.modal-compact #nextBtn,
+  #feedback.modal-compact #homeBtn2,
+  #feedback.show #nextBtn,
+  #feedback.show #homeBtn2 {
+    width: min(40vw, 360px) !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+}
+
 .gold-float,
 .rating-float {
   position: fixed;
@@ -1235,50 +1352,19 @@ button:not(.bonus-button):not(#checkBtn):disabled {
 }
 
 .level-up-overlay {
-  position: fixed;
-  top: 16%;
-  left: 50%;
-  transform: translate(-50%, 0);
-  padding: 0.6rem 1.4rem;
-  background: rgba(245, 245, 220, 0.95);
-  color: #000;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  border-radius: 12px;
-  z-index: 12010;
-  pointer-events: auto;
-  opacity: 0;
-  text-transform: uppercase;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  align-items: center;
+  display: none !important;
 }
 
 .level-up-overlay__text {
-  text-align: center;
+  display: none;
 }
 
 .level-up-overlay__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  display: none;
 }
 
 .level-up-overlay__btn {
-  background: #2e7d32;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 0.45rem 1rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
-}
-.level-up-overlay__btn:active {
-  transform: translateY(1px);
+  display: none;
 }
 
 .level-up-overlay__btn--ghost {
@@ -1351,6 +1437,46 @@ button:not(.bonus-button):not(#checkBtn):disabled {
   #board {
     margin-top: 8px;
     margin-bottom: 8px;
+  }
+}
+
+@media (max-height: 640px) {
+  #feedback {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    padding: 0.75rem;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  #feedbackMsg {
+    margin: 0 0 0.5rem 0;
+    text-align: center;
+  }
+  #goldPopup {
+    width: 100%;
+    text-align: center;
+  }
+  #feedback .feedback-bottom-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 0.5rem;
+    box-sizing: border-box;
+  }
+  #nextBtn,
+  #homeBtn2 {
+    width: 100%;
+    max-width: 100%;
+    padding: 0.75rem 0;
+    font-size: 1rem;
+    box-sizing: border-box;
   }
 }
 

@@ -328,73 +328,14 @@ function computeRatingResult({
 function triggerLevelOverlay(level) {
   const existing = document.querySelector('.level-up-overlay');
   if (existing) existing.remove();
-
-  const overlay = document.createElement('div');
-  overlay.className = 'level-up-overlay';
-  setGoldRewardBlocked(true);
-  setSkillRewardBlocked(true);
-  const msg = document.createElement('div');
-  msg.className = 'level-up-overlay__text';
-  msg.textContent = `Level ${level} now unlocked!`;
-
-  const buttonsRow = document.createElement('div');
-  buttonsRow.className = 'level-up-overlay__actions';
-
-  const goBtn = document.createElement('button');
-  goBtn.className = 'level-up-overlay__btn level-up-overlay__btn--ghost';
-  goBtn.type = 'button';
-  goBtn.textContent = 'Go Now';
-
-  const okBtn = document.createElement('button');
-  okBtn.className = 'level-up-overlay__btn';
-  okBtn.type = 'button';
-  okBtn.textContent = 'Okay';
-
   const nextBtn = document.getElementById('nextBtn');
   if (nextBtn) {
-    nextBtn.disabled = true;
-    nextBtn.classList.add('next-disabled-by-levelup');
+    nextBtn.disabled = false;
+    nextBtn.classList.remove('next-disabled-by-levelup');
   }
-
-  okBtn.addEventListener('click', () => {
-    overlay.remove();
-    if (nextBtn) {
-      nextBtn.disabled = false;
-      nextBtn.classList.remove('next-disabled-by-levelup');
-    }
-    setGoldRewardBlocked(false);
-    setSkillRewardBlocked(false);
-  });
-
-  goBtn.addEventListener('click', () => {
-    cleanupFloatingRewards();
-    overlay.remove();
-    const homeBtn =
-      document.getElementById('homeBtn2') || document.getElementById('homeBtn');
-    if (homeBtn) homeBtn.click();
-    if (nextBtn) {
-      nextBtn.disabled = false;
-      nextBtn.classList.remove('next-disabled-by-levelup');
-    }
-    setGoldRewardBlocked(false);
-    setSkillRewardBlocked(false);
-  });
-
-  buttonsRow.appendChild(goBtn);
-  buttonsRow.appendChild(okBtn);
-
-  overlay.appendChild(msg);
-  overlay.appendChild(buttonsRow);
-  document.body.appendChild(overlay);
-
-  const duration = 420;
-  overlay.animate(
-    [
-      { opacity: 0, transform: 'translate(-50%, -6%) scale(0.96)' },
-      { opacity: 1, transform: 'translate(-50%, 0) scale(1)' },
-    ],
-    { duration, easing: 'ease-out', fill: 'forwards' }
-  );
+  setGoldRewardBlocked(false);
+  setSkillRewardBlocked(false);
+  // Legacy overlay intentionally disabled; unlock messaging handled elsewhere.
 }
 
 function incrementLevelIfNeeded(rating) {

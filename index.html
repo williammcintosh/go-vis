@@ -101,7 +101,11 @@
         <div class="game-wrapper">
           <div id="board"></div>
           <div id="timerContainer" class="is-timing" aria-live="polite">
-            <div id="timerBar" role="progressbar" aria-label="Time remaining"></div>
+            <div
+              id="timerBar"
+              role="progressbar"
+              aria-label="Time remaining"
+            ></div>
             <button id="checkBtn" type="button">Check</button>
           </div>
           <div id="bonusContainer">
@@ -109,30 +113,30 @@
               <span class="bonus-icon" aria-hidden="true">
                 <img src="images/addTime.png" alt="" />
               </span>
-            <span class="bonus-label">Add Time</span>
-            <span class="bonus-cost">
-              <img src="images/gold.png" alt="" class="bonus-cost-icon" />
-              <span class="bonus-cost-value">-500</span>
-            </span>
-          </button>
-          <button type="button" class="bonus bonus-button" id="eyeGlassBonus">
-            <span class="bonus-icon" aria-hidden="true">
-              <img src="images/eyeGlass.png" alt="" />
-            </span>
-            <span class="bonus-label">Peek Stones</span>
-            <span class="bonus-cost">
-              <img src="images/gold.png" alt="" class="bonus-cost-icon" />
-              <span class="bonus-cost-value">-500</span>
-            </span>
-          </button>
+              <span class="bonus-label">Add Time</span>
+              <span class="bonus-cost">
+                <img src="images/gold.png" alt="" class="bonus-cost-icon" />
+                <span class="bonus-cost-value">-500</span>
+              </span>
+            </button>
+            <button type="button" class="bonus bonus-button" id="eyeGlassBonus">
+              <span class="bonus-icon" aria-hidden="true">
+                <img src="images/eyeGlass.png" alt="" />
+              </span>
+              <span class="bonus-label">Peek Stones</span>
+              <span class="bonus-cost">
+                <img src="images/gold.png" alt="" class="bonus-cost-icon" />
+                <span class="bonus-cost-value">-500</span>
+              </span>
+            </button>
           </div>
-              <div id="feedback">
-              <p id="feedbackMsg"></p>
-              <div id="goldPopup"></div>
-              <button id="nextBtn">Next Challenge</button>
-              <div class="feedback-bottom-row">
-                <button id="homeBtn2">Home</button>
-              </div>
+          <div id="feedback">
+            <p id="feedbackMsg"></p>
+            <div id="goldPopup"></div>
+            <div class="feedback-bottom-row">
+              <button id="homeBtn2">Home</button>
+              <button id="nextBtn">Next</button>
+            </div>
           </div>
         </div>
       </div>
@@ -143,12 +147,7 @@
           <div class="setting-group">
             <h3>Tap Mode</h3>
             <label class="tap-mode-option">
-              <input
-                type="radio"
-                name="tapMode"
-                value="classic"
-                checked
-              />
+              <input type="radio" name="tapMode" value="classic" checked />
               <div class="option-copy">
                 <span class="option-title">Classic</span>
                 <span class="option-desc"

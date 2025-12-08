@@ -10,6 +10,21 @@ function checkAnswers({
   addGold,
   logSkillRatingDebug,
 }) {
+  const applyFeedbackCompactClass = () => {
+    const feedbackEl = document.getElementById('feedback');
+    if (!feedbackEl) return;
+    if (window.innerHeight < 640) {
+      feedbackEl.classList.add('modal-compact');
+    } else {
+      feedbackEl.classList.remove('modal-compact');
+    }
+  };
+  if (!window.__feedbackCompactWatcher) {
+    window.__feedbackCompactWatcher = true;
+    window.addEventListener('resize', applyFeedbackCompactClass);
+  }
+  applyFeedbackCompactClass();
+
   if (window.activeGame?.timer) {
     clearInterval(window.activeGame.timer);
     window.activeGame.timer = null;
@@ -219,7 +234,7 @@ function checkAnswers({
 
   if (nextBtn) {
     const succeeded = allCorrect;
-    nextBtn.textContent = succeeded ? 'Next Challenge' : 'Retry';
+    nextBtn.textContent = succeeded ? 'Next' : 'Retry';
   }
 
   if (window.recordDifficultyOutcome) {
