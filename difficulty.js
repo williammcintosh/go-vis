@@ -1,4 +1,4 @@
-import { setGoldRewardBlocked } from './gold.js';
+import { clearGoldRewardText, setGoldRewardBlocked } from './gold.js';
 
 const RATING_KEY = 'skill_rating';
 const SKILL_PROGRESS_KEY = 'skill_progress';
@@ -139,6 +139,28 @@ function clearSkillRewardText() {
   activeRatingStack = null;
   pendingRatingLines = [];
   pendingRatingTarget = null;
+}
+
+function stopAndRemoveFloats(selector) {
+  document.querySelectorAll(selector).forEach((el) => {
+    if (typeof el.getAnimations === 'function') {
+      el.getAnimations().forEach((anim) => {
+        try {
+          anim.finish();
+        } catch (_err) {
+          if (typeof anim.cancel === 'function') anim.cancel();
+        }
+      });
+    }
+    el.remove();
+  });
+}
+
+function cleanupFloatingRewards() {
+  clearGoldRewardText();
+  clearSkillRewardText();
+  stopAndRemoveFloats('.gold-float');
+  stopAndRemoveFloats('.rating-float');
 }
 
 function setSkillRewardBlocked(blocked) {
@@ -345,6 +367,7 @@ function triggerLevelOverlay(level) {
   });
 
   goBtn.addEventListener('click', () => {
+    cleanupFloatingRewards();
     overlay.remove();
     const homeBtn =
       document.getElementById('homeBtn2') || document.getElementById('homeBtn');
@@ -737,6 +760,7 @@ export {
   renderSkillRating,
   logSkillRatingDebug,
   clearSkillRewardText,
+  cleanupFloatingRewards,
   showRatingGain,
   writeSkillDebug,
   createDifficultyOutcomeRecorder,

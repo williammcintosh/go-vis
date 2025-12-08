@@ -5,7 +5,7 @@ import {
   MIN_STONES,
   renderSkillRating,
   logSkillRatingDebug,
-  clearSkillRewardText,
+  cleanupFloatingRewards,
   writeSkillDebug,
   createDifficultyOutcomeRecorder,
 } from './difficulty.js';
@@ -41,7 +41,6 @@ import {
   updateBonusAvailability,
   isFeedbackVisible,
   calculateSpeedBonus,
-  clearGoldRewardText,
 } from './gold.js';
 window.updateBonusAvailability = updateBonusAvailability;
 import { createTutorialController } from './tutorial.js';
@@ -121,11 +120,6 @@ function setScrollLock(isLocked) {
   document.documentElement.classList[method]('no-scroll');
   document.body.classList[method]('no-scroll');
 }
-
-const clearRewardTextDisplays = () => {
-  clearGoldRewardText();
-  clearSkillRewardText();
-};
 
 function getActiveStoneCount(fallbackConfig) {
   const fromActive = Number(
@@ -541,7 +535,7 @@ levelSelectController = createLevelSelectController({
 intro.classList.add('active');
 
 document.getElementById('homeBtn').onclick = () => {
-  clearRewardTextDisplays();
+  cleanupFloatingRewards();
   levelSelectController?.hide();
   showScreen(intro, difficulty);
 };
@@ -575,7 +569,7 @@ const nextBtn = document.getElementById('nextBtn');
 const homeBtn2 = document.getElementById('homeBtn2');
 
 homeBtn2.addEventListener('click', () => {
-  clearRewardTextDisplays();
+  cleanupFloatingRewards();
   showHomeScreen({
     feedback: document.getElementById('feedback'),
     updateBonusAvailability,
@@ -593,7 +587,7 @@ homeBtn2.addEventListener('click', () => {
 });
 
 nextBtn.onclick = async () => {
-  clearRewardTextDisplays();
+  cleanupFloatingRewards();
   await prepareNextChallenge({
     feedback: document.getElementById('feedback'),
     updateBonusAvailability,
@@ -609,6 +603,7 @@ nextBtn.onclick = async () => {
 
 // ---------- Main Game ----------
 async function startGame(mode) {
+  cleanupFloatingRewards();
   setScrollLock(true);
   showGoldBadge();
   showSkillBadge();
