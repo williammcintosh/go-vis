@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "go-vis"
-  }
+    "prod": "go-vis",
+    "dev": "go-vis-dev"
+  },
+  "targets": {},
+  "etags": {}
 }
