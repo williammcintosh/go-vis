@@ -6,7 +6,6 @@ function setupGameState({
   MODE_INTERVAL_SPEED,
   MIN_STONES,
   getBoardSizeForLevel,
-  updateModeIndicator,
   renderSkillRating,
   nextPuzzleSuggestion,
   setNextPuzzleSuggestion,
@@ -40,26 +39,6 @@ function setupGameState({
   const resolvedBoardSize =
     plannedPuzzle?.boardSize ?? getBoardSizeForLevel(playerLevel);
 
-  const levelTextEl = document.getElementById('levelText');
-  const roundTextEl = document.getElementById('roundText');
-  if (levelTextEl) {
-    const boardLabel = resolvedBoardSize
-      ? `${resolvedBoardSize}x${resolvedBoardSize} board`
-      : '';
-    const stonesLabel = plannedPuzzle?.stoneCount
-      ? `${plannedPuzzle.stoneCount} stones`
-      : '';
-    const challengeLabel = 'challenge 1/?';
-    const attemptsLabel = 'attempts 0';
-    levelTextEl.innerHTML = [boardLabel, stonesLabel, challengeLabel, attemptsLabel]
-      .filter((line) => line !== '')
-      .join('<br>');
-  }
-  if (roundTextEl) {
-    roundTextEl.textContent = '';
-  }
-
-  updateModeIndicator(mode);
   const TIME_PER_STONE = 7;
   const stoneCount = Math.max(
     MIN_STONES,
@@ -67,6 +46,15 @@ function setupGameState({
   );
   const baseBoardSize =
     resolvedBoardSize || getBoardSizeForLevel(playerLevel) || 5;
+
+  window.setModeProgressRowText?.({
+    mode,
+    boardSize: baseBoardSize,
+    stoneCount,
+    levelIndex: 1,
+    levelTotal: null,
+  });
+
   const config = {
     intervalSpeed: MODE_INTERVAL_SPEED[mode] ?? 40,
     stoneCount,

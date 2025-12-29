@@ -108,10 +108,6 @@ const MODE_TAGLINES = {
   position: 'Beginner',
   sequence: 'Advanced',
 };
-const MODE_ICONS = {
-  position: 'images/position_small.png',
-  sequence: 'images/sequence_small.png',
-};
 
 const BONUS_COST_PER_STONE = 20;
 
@@ -120,6 +116,38 @@ function setScrollLock(isLocked) {
   document.documentElement.classList[method]('no-scroll');
   document.body.classList[method]('no-scroll');
 }
+
+function setHeaderHidden(isHidden) {
+  document.body.classList.toggle('header-hidden', Boolean(isHidden));
+}
+
+function setModeProgressRowText({
+  mode,
+  boardSize,
+  stoneCount,
+  levelIndex,
+  levelTotal,
+}) {
+  const row = document.getElementById('modeProgressRow');
+  if (!row) return;
+  const modeLabel = mode === 'sequence' ? 'Sequence Mode' : 'Position Mode';
+  const parts = [modeLabel];
+  if (Number.isFinite(boardSize)) {
+    parts.push(`${boardSize}x${boardSize}`);
+  }
+  if (Number.isFinite(stoneCount)) {
+    parts.push(`${stoneCount} stones`);
+  }
+  if (Number.isFinite(levelIndex) || levelTotal) {
+    const indexLabel = Number.isFinite(levelIndex) ? levelIndex : '?';
+    const totalLabel = Number.isFinite(levelTotal)
+      ? levelTotal
+      : levelTotal || '?';
+    parts.push(`level ${indexLabel}/${totalLabel}`);
+  }
+  row.textContent = parts.join(' | ');
+}
+window.setModeProgressRowText = setModeProgressRowText;
 
 function getActiveStoneCount(fallbackConfig) {
   const fromActive = Number(
@@ -381,15 +409,6 @@ function updateModeStatuses() {
   });
 }
 
-function updateModeIndicator(mode) {
-  const icon = document.getElementById('modeIndicatorIcon');
-  const text = document.getElementById('modeIndicatorText');
-  if (!icon && !text) return;
-  const label = mode === 'sequence' ? 'Sequence Mode' : 'Position Mode';
-  if (icon) icon.src = MODE_ICONS[mode] ?? MODE_ICONS.position;
-  if (text) text.textContent = label;
-}
-
 // ---------- Save State ----------
 // Load saved progress if it exists
 let saved = null;
@@ -398,8 +417,7 @@ try {
 } catch (_err) {
   saved = null;
 }
-const continueBtn = document.getElementById('continueBtn');
-const startBtn = document.getElementById('startBtn');
+const startBtn = document.getElementById('start-btn');
 const confirmModal = document.getElementById('confirmModal');
 const confirmYes = document.getElementById('confirmYes');
 const confirmNo = document.getElementById('confirmNo');
@@ -417,8 +435,10 @@ function resetTutorialProgress() {
 
 function refreshHomeButtons() {
   const hasSave = Boolean(localStorage.getItem('goVizProgress'));
-  continueBtn.style.display = hasSave ? 'inline-block' : 'none';
-  startBtn.textContent = hasSave ? 'Restart' : 'Start';
+  if (startBtn) {
+    startBtn.dataset.hasSave = hasSave ? '1' : '0';
+    startBtn.textContent = 'Play';
+  }
 }
 window.refreshHomeButtons = refreshHomeButtons;
 
@@ -471,25 +491,20 @@ const resetStateParams = {
   goldElement,
 };
 
-// Continue existing game, straight to maingame
-continueBtn.addEventListener('click', () => {
-  levelSelectController?.hide();
-  showMainScreen({ mainGame, show: difficulty, hide: intro, showScreen });
-});
-
-// Restart confirmation
-startBtn.addEventListener('click', () => {
-  const hasSave = localStorage.getItem('goVizProgress');
+// Play entry point
+startBtn?.addEventListener('click', () => {
+  const hasSave = Boolean(localStorage.getItem('goVizProgress'));
   if (hasSave) {
-    confirmModal.classList.add('active');
-  } else {
-    const resetResult = resetGameStateUI(resetStateParams);
-    difficultyState = resetResult.difficultyState;
-    playerProgress = resetResult.playerProgress;
-    challengeAttempts = resetResult.challengeAttempts;
-    levelSelectController?.resetSelection();
-    nextPuzzleSuggestion = null;
+    levelSelectController?.hide();
+    showMainScreen({ mainGame, show: difficulty, hide: intro, showScreen });
+    return;
   }
+  const resetResult = resetGameStateUI(resetStateParams);
+  difficultyState = resetResult.difficultyState;
+  playerProgress = resetResult.playerProgress;
+  challengeAttempts = resetResult.challengeAttempts;
+  levelSelectController?.resetSelection();
+  nextPuzzleSuggestion = null;
 });
 
 confirmYes.addEventListener('click', () => {
@@ -511,6 +526,7 @@ function showScreen(show, hide) {
   if (show === difficulty) {
     updateModeStatuses();
   }
+  setHeaderHidden(false);
   hide.classList.remove('active');
   show.classList.add('active');
 }
@@ -545,6 +561,7 @@ document.querySelectorAll('.diffBtn').forEach((b) => {
   b.onclick = () => {
     showGoldBadge();
     showSkillBadge();
+    setHeaderHidden(false);
     levelSelectController?.open(b.dataset.mode);
   };
 });
@@ -603,6 +620,7 @@ nextBtn.onclick = async () => {
 
 // ---------- Main Game ----------
 async function startGame(mode) {
+  setHeaderHidden(true);
   cleanupFloatingRewards();
   setScrollLock(true);
   showGoldBadge();
@@ -624,7 +642,6 @@ async function startGame(mode) {
     MODE_INTERVAL_SPEED,
     MIN_STONES,
     getBoardSizeForLevel,
-    updateModeIndicator,
     renderSkillRating: (rating) =>
       renderSkillRatingAll(rating, difficultyState?.rating),
     nextPuzzleSuggestion,

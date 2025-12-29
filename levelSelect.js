@@ -936,9 +936,6 @@ function createLevelSelectController({
   }
 
   function updateHeader({ activeGame, mode }) {
-    const levelText = document.getElementById('levelText');
-    const roundText = document.getElementById('roundText');
-    if (!levelText || !roundText) return;
     if (!state.totals) {
       ensureTotals().then(() => updateHeader({ activeGame, mode }));
     }
@@ -976,14 +973,13 @@ function createLevelSelectController({
     const attempts = Number.isFinite(attemptsRaw)
       ? Math.max(0, attemptsRaw - 1)
       : 0;
-    const headerLines = [
-      `${boardSize}x${boardSize} board`,
-      `${stoneCount} stones`,
-      `challenge ${challengeNumber}/${total || '?'}`,
-      `attempts ${attempts}`,
-    ];
-    levelText.innerHTML = headerLines.join('<br>');
-    roundText.textContent = '';
+    window.setModeProgressRowText?.({
+      mode: currentMode,
+      boardSize,
+      stoneCount,
+      levelIndex: challengeNumber,
+      levelTotal: total || null,
+    });
   }
 
   function detectUnlocks(ratingBefore, ratingAfter) {

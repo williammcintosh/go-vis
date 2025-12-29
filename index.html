@@ -10,202 +10,188 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <body>
-      <div id="topBar">
-        <div id="goldBadge" class="gold-badge badge" aria-live="polite">
-          <div class="gold-badge__frame">
-            <div class="gold-badge__core">
-              <span id="goldValue" class="gold-badge__value">0</span>
-              <span class="gold-badge__label">Gold</span>
+    <header class="site-header">
+      <div class="brand">
+        <img src="./images/go-icon.png" alt="Go Viz logo" class="brand-logo" />
+        <span class="brand-name">Go Viz</span>
+      </div>
+      <div id="account-area" class="account-area" aria-live="polite"></div>
+    </header>
+
+    <div id="topBar">
+      <div id="goldBadge" class="gold-badge badge" aria-live="polite">
+        <div class="gold-badge__frame">
+          <div class="gold-badge__core">
+            <span id="goldValue" class="gold-badge__value">0</span>
+            <span class="gold-badge__label">Gold</span>
+          </div>
+        </div>
+      </div>
+      <div id="skillBadge" class="skill-badge badge" aria-live="polite">
+        <div class="skill-badge__frame">
+          <div class="skill-badge__core">
+            <span id="skillRatingText" class="skill-badge__value">--</span>
+            <span class="skill-badge__label">Skill</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="intro" class="screen active">
+      <div class="hero">
+        <p class="hero-tagline">Train your Go memory and visualization.</p>
+        <button id="start-btn" class="primary-action">Play</button>
+      </div>
+    </div>
+
+    <!-- Restart Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+      <div class="modal-content">
+        <p>This will erase your current progress. Are you sure?</p>
+        <div class="modal-buttons">
+          <button id="confirmNo">Cancel</button>
+          <button id="confirmYes">Yes, restart</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="difficulty">
+      <div class="top">
+        <img src="images/go-icon.png" alt="Go Viz icon" class="logo" />
+        <h1>Go Viz</h1>
+      </div>
+      <div class="btn-col">
+        <div class="mode-grid">
+          <div class="mode-card mode-card--horizontal" id="position-card">
+            <div class="mode-icon">
+              <img src="images/position.png" alt="Position mode" />
+            </div>
+            <div class="mode-content">
+              <button class="diffBtn" data-mode="position">Position</button>
+              <p class="mode-status" id="mode-status-position">Beginner</p>
+            </div>
+          </div>
+          <div class="mode-card mode-card--horizontal" id="sequence-card">
+            <div class="mode-icon">
+              <img src="images/sequence.png" alt="Sequence mode" />
+            </div>
+            <div class="mode-content">
+              <button class="diffBtn" data-mode="sequence">Sequence</button>
+              <p class="mode-status" id="mode-status-sequence">Advanced</p>
             </div>
           </div>
         </div>
-        <div id="gameHeader">
-          <div class="header-block header-center">
-            <div id="modeIndicatorText" class="mode-chip">Position Mode</div>
-            <p id="levelInfo">
-              <span id="levelText"></span><br />
-              <span id="roundText"></span>
-            </p>
+        <button id="homeBtn">Home</button>
+      </div>
+    </div>
+
+    <div id="mainGame">
+      <div class="game-wrapper">
+        <div id="board"></div>
+        <div id="modeProgressRow" aria-label="mode and progress"></div>
+        <div id="timerContainer" class="is-timing" aria-live="polite">
+          <div
+            id="timerBar"
+            role="progressbar"
+            aria-label="Time remaining"
+          ></div>
+          <button id="checkBtn" type="button">Check</button>
+        </div>
+        <div id="bonusContainer">
+          <button type="button" class="bonus bonus-button" id="addTimeBonus">
+            <span class="bonus-icon" aria-hidden="true">
+              <img src="images/addTime.png" alt="" />
+            </span>
+            <span class="bonus-label">Add Time</span>
+            <span class="bonus-cost">
+              <img src="images/gold.png" alt="" class="bonus-cost-icon" />
+              <span class="bonus-cost-value">-500</span>
+            </span>
+          </button>
+          <button type="button" class="bonus bonus-button" id="eyeGlassBonus">
+            <span class="bonus-icon" aria-hidden="true">
+              <img src="images/eyeGlass.png" alt="" />
+            </span>
+            <span class="bonus-label">Peek Stones</span>
+            <span class="bonus-cost">
+              <img src="images/gold.png" alt="" class="bonus-cost-icon" />
+              <span class="bonus-cost-value">-500</span>
+            </span>
+          </button>
+        </div>
+        <div id="feedback">
+          <p id="feedbackMsg"></p>
+          <div id="goldPopup"></div>
+          <div class="feedback-bottom-row">
+            <button id="homeBtn2">Home</button>
+            <button id="nextBtn">Next</button>
           </div>
         </div>
-        <div id="skillBadge" class="skill-badge badge" aria-live="polite">
-          <div class="skill-badge__frame">
-            <div class="skill-badge__core">
-              <span id="skillRatingText" class="skill-badge__value">--</span>
-              <span class="skill-badge__label">Skill</span>
+      </div>
+    </div>
+
+    <div id="settingsModal" class="screen">
+      <div class="settings-content">
+        <h2>Settings</h2>
+        <div class="setting-group">
+          <h3>Tap Mode</h3>
+          <label class="tap-mode-option">
+            <input type="radio" name="tapMode" value="classic" checked />
+            <div class="option-copy">
+              <span class="option-title">Classic</span>
+              <span class="option-desc"
+                >Tap cycles black → white → empty, matching the original
+                behavior.</span
+              >
             </div>
-          </div>
-        </div>
-      </div>
-      <div id="intro" class="screen active">
-        <div class="top">
-          <img src="images/go-icon.png" alt="Go Viz icon" class="logo" />
-          <h1>Go Viz</h1>
-          <p class="subtitle">Train your Go memory and visualization.</p>
-        </div>
-
-        <div class="btn-col">
-          <button id="continueBtn" style="display: none">Continue</button>
-          <button id="startBtn">Start</button>
-          <button id="settingsBtn">Settings</button>
-          <button id="loginBtn">Login with Google</button>
-        </div>
-      </div>
-
-      <!-- Restart Confirmation Modal -->
-      <div id="confirmModal" class="modal">
-        <div class="modal-content">
-          <p>This will erase your current progress. Are you sure?</p>
-          <div class="modal-buttons">
-            <button id="confirmNo">Cancel</button>
-            <button id="confirmYes">Yes, restart</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="difficulty">
-        <div class="top">
-          <img src="images/go-icon.png" alt="Go Viz icon" class="logo" />
-          <h1>Go Viz</h1>
-        </div>
-        <div class="btn-col">
-          <div class="mode-grid">
-            <div class="mode-card mode-card--horizontal" id="position-card">
-              <div class="mode-icon">
-                <img src="images/position.png" alt="Position mode" />
-              </div>
-              <div class="mode-content">
-                <button class="diffBtn" data-mode="position">
-                  Position Mode
-                </button>
-                <p class="mode-status" id="mode-status-position">Beginner</p>
-              </div>
+          </label>
+          <label class="tap-mode-option">
+            <input type="radio" name="tapMode" value="toggle" />
+            <div class="option-copy">
+              <span class="option-title">Toggle stones</span>
+              <span class="option-desc"
+                >Tap flips stone color, double-tap removes, and empty taps add
+                the opposite color of your last stone.</span
+              >
             </div>
-            <div class="mode-card mode-card--horizontal" id="sequence-card">
-              <div class="mode-icon">
-                <img src="images/sequence.png" alt="Sequence mode" />
-              </div>
-              <div class="mode-content">
-                <button class="diffBtn" data-mode="sequence">
-                  Sequence Mode
-                </button>
-                <p class="mode-status" id="mode-status-sequence">Advanced</p>
-              </div>
-            </div>
-          </div>
-          <button id="homeBtn">Home</button>
+          </label>
+        </div>
+
+        <div class="settings-about">
+          <h3>About Go Viz</h3>
+          <p>
+            During the timer, examine the stones and remember their color and
+            location. When the timer ends, repeat the same pattern and tap Check
+            to see how you did.
+          </p>
+          <p>
+            Double-tap anywhere on the screen during memorization to speed up
+            the timer. Progress through all the levels, improve your memory, and
+            have fun!
+          </p>
+        </div>
+        <div class="settings-actions">
+          <button id="settingsHomeBtn" class="green-btn">Home</button>
         </div>
       </div>
+    </div>
 
-      <div id="mainGame">
-        <div class="game-wrapper">
-          <div id="board"></div>
-          <div id="timerContainer" class="is-timing" aria-live="polite">
-            <div
-              id="timerBar"
-              role="progressbar"
-              aria-label="Time remaining"
-            ></div>
-            <button id="checkBtn" type="button">Check</button>
-          </div>
-          <div id="bonusContainer">
-            <button type="button" class="bonus bonus-button" id="addTimeBonus">
-              <span class="bonus-icon" aria-hidden="true">
-                <img src="images/addTime.png" alt="" />
-              </span>
-              <span class="bonus-label">Add Time</span>
-              <span class="bonus-cost">
-                <img src="images/gold.png" alt="" class="bonus-cost-icon" />
-                <span class="bonus-cost-value">-500</span>
-              </span>
-            </button>
-            <button type="button" class="bonus bonus-button" id="eyeGlassBonus">
-              <span class="bonus-icon" aria-hidden="true">
-                <img src="images/eyeGlass.png" alt="" />
-              </span>
-              <span class="bonus-label">Peek Stones</span>
-              <span class="bonus-cost">
-                <img src="images/gold.png" alt="" class="bonus-cost-icon" />
-                <span class="bonus-cost-value">-500</span>
-              </span>
-            </button>
-          </div>
-          <div id="feedback">
-            <p id="feedbackMsg"></p>
-            <div id="goldPopup"></div>
-            <div class="feedback-bottom-row">
-              <button id="homeBtn2">Home</button>
-              <button id="nextBtn">Next</button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- Tutorial overlay elements -->
+    <div id="tutorialOverlay" class="tutorial-overlay tutorial-hidden"></div>
+    <div
+      id="tutorialHighlight"
+      class="tutorial-highlight tutorial-hidden"
+    ></div>
+    <div id="tutorialTooltip" class="tutorial-tooltip tutorial-hidden">
+      <p id="tutorialText"></p>
+      <button id="tutorialOkBtn">Okay</button>
+    </div>
+    <div id="tutorialSkip" class="tutorial-skip tutorial-hidden">
+      <button id="tutorialSkipBtn">Skip tutorial</button>
+    </div>
 
-      <div id="settingsModal" class="screen">
-        <div class="settings-content">
-          <h2>Settings</h2>
-          <div class="setting-group">
-            <h3>Tap Mode</h3>
-            <label class="tap-mode-option">
-              <input type="radio" name="tapMode" value="classic" checked />
-              <div class="option-copy">
-                <span class="option-title">Classic</span>
-                <span class="option-desc"
-                  >Tap cycles black → white → empty, matching the original
-                  behavior.</span
-                >
-              </div>
-            </label>
-            <label class="tap-mode-option">
-              <input type="radio" name="tapMode" value="toggle" />
-              <div class="option-copy">
-                <span class="option-title">Toggle stones</span>
-                <span class="option-desc"
-                  >Tap flips stone color, double-tap removes, and empty taps add
-                  the opposite color of your last stone.</span
-                >
-              </div>
-            </label>
-          </div>
-
-          <div class="settings-about">
-            <h3>About Go Viz</h3>
-            <p>
-              During the timer, examine the stones and remember their color and
-              location. When the timer ends, repeat the same pattern and tap
-              Check to see how you did.
-            </p>
-            <p>
-              Double-tap anywhere on the screen during memorization to speed up
-              the timer. Progress through all the levels, improve your memory,
-              and have fun!
-            </p>
-          </div>
-          <div class="settings-actions">
-            <button id="settingsHomeBtn" class="green-btn">Home</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tutorial overlay elements -->
-      <div id="tutorialOverlay" class="tutorial-overlay tutorial-hidden"></div>
-      <div
-        id="tutorialHighlight"
-        class="tutorial-highlight tutorial-hidden"
-      ></div>
-      <div id="tutorialTooltip" class="tutorial-tooltip tutorial-hidden">
-        <p id="tutorialText"></p>
-        <button id="tutorialOkBtn">Okay</button>
-      </div>
-      <div id="tutorialSkip" class="tutorial-skip tutorial-hidden">
-        <button id="tutorialSkipBtn">Skip tutorial</button>
-      </div>
-
-      <script type="module" src="./firebase-init.js"></script>
-      <script src="board-logic.js"></script>
-      <script type="module" src="app.js"></script>
-      <script src="auth-ui.js"></script>
-    </body>
+    <script type="module" src="./firebase-init.js"></script>
+    <script src="board-logic.js"></script>
+    <script type="module" src="app.js"></script>
+    <script src="auth-ui.js"></script>
   </body>
 </html>
