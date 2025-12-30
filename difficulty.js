@@ -103,20 +103,20 @@ function showRatingGain(amount, targetEl = null, options = {}) {
   const float = document.createElement('div');
   float.className = 'rating-float rating-float-stack';
   float.style.opacity = '1';
-  float.style.fontSize = 'clamp(0.5rem, 2vw + 0.4rem, 1.35rem)';
+  float.style.fontSize = 'clamp(0.5rem, 0.8rem, 1.35rem)';
   float.style.left = `${relX}px`;
   float.style.top = `${relY}px`;
   float.style.right = 'auto';
   float.style.transform = 'translateX(-50%)';
   const addLine = (text) => {
-  if (skillRewardsBlocked && !forceRender) {
-    pendingRatingLines.push(text);
-    return;
-  }
-  const line = document.createElement('div');
-  line.textContent = text;
-  float.appendChild(line);
-};
+    if (skillRewardsBlocked && !forceRender) {
+      pendingRatingLines.push(text);
+      return;
+    }
+    const line = document.createElement('div');
+    line.textContent = text;
+    float.appendChild(line);
+  };
 
   if (skillRewardsBlocked && !forceRender) {
     pendingRatingTarget = target;

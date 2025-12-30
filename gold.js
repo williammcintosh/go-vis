@@ -74,7 +74,7 @@ function showGoldFloat(label, amount, duration = getGoldAwardDuration(amount)) {
   const float = document.createElement('div');
   float.className = 'gold-float';
   float.textContent = `+${amount} ${label}`;
-  float.style.fontSize = 'clamp(0.5rem, 2vw + 0.4rem, 1.35rem)';
+  float.style.fontSize = 'clamp(0.5rem, 0.8rem, 1.35rem)';
   float.style.left = `${relX}px`;
   float.style.top = `${relY}px`;
   float.style.transform = `translateX(-50%)`;
@@ -106,7 +106,7 @@ function showGoldFloatStack(labels = [], options = {}) {
   const relY = badgeRect ? badgeRect.bottom + 10 : startRect.top + 10;
   const container = document.createElement('div');
   container.className = 'gold-float gold-float-stack';
-  container.style.fontSize = 'clamp(0.5rem, 2vw + 0.4rem, 1.35rem)';
+  container.style.fontSize = 'clamp(0.5rem, 0.8rem, 1.35rem)';
   container.style.position = 'absolute';
   container.style.left = `${relX}px`;
   container.style.top = `${relY}px`;
