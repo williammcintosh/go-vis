@@ -18,6 +18,7 @@ function createTutorialController() {
   let hideTooltipTimeout = null;
   let context = null;
   let activeStep = null;
+  const completionListeners = [];
 
   tooltipBtn?.addEventListener('click', () => {
     if (!tooltipResolver) return;
@@ -393,6 +394,13 @@ function createTutorialController() {
     }
     hideAll();
     localStorage.setItem(TUTORIAL_KEY, '1');
+    completionListeners.forEach((cb) => {
+      try {
+        cb?.(skipped);
+      } catch (_err) {
+        /* ignore listener errors */
+      }
+    });
   }
 
   function delay(ms) {
@@ -445,6 +453,18 @@ function createTutorialController() {
     configure,
     attachToGame,
     buildGameAttachment,
+    onComplete: (cb) => {
+      if (typeof cb === 'function') {
+        completionListeners.push(cb);
+        if (completed) {
+          try {
+            cb(false);
+          } catch (_err) {
+            /* ignore */
+          }
+        }
+      }
+    },
     shouldHoldTimer: () => active && holdTimer,
     shouldIgnoreDoubleTap: () => active && ignoreDoubleTap,
     onAddTimeUsed: () => {

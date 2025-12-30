@@ -225,6 +225,25 @@ function checkAnswers({
   if (window.recordDifficultyOutcome) {
     window.recordDifficultyOutcome(Boolean(window.activeGame?.timedOut));
   }
+  let targetWasCorrect = null;
+  const targetInfo = window.getTargetInfo?.();
+  if (targetInfo) {
+    const inter = document.querySelector(
+      `.intersection[data-x="${targetInfo.x}"][data-y="${targetInfo.y}"]`
+    );
+    if (inter) {
+      const expected = stones.find(
+        (s) => s.x === targetInfo.x && s.y === targetInfo.y
+      );
+      const playerWhite = inter.classList.contains('white');
+      const playerBlack = inter.classList.contains('black');
+      const correct =
+        expected &&
+        ((expected.color === 'white' && playerWhite) ||
+          (expected.color === 'black' && playerBlack));
+      targetWasCorrect = Boolean(correct);
+    }
+  }
 
   if (allCorrect) {
     const praise = [
@@ -292,6 +311,7 @@ function checkAnswers({
   setTimeout(() => feedback.classList.add('show-btn'), 1500);
   msg.style.opacity = 1;
   nextBtn.style.display = 'inline-block';
+  return { passed: allCorrect, targetWasCorrect };
 }
 
 function createCheckAnswersHandler({
@@ -305,9 +325,10 @@ function createCheckAnswersHandler({
   addGold,
   logSkillRatingDebug,
   getTimeLeft,
+  onResult,
 }) {
-  return () =>
-    checkAnswers({
+  return () => {
+    const result = checkAnswers({
       timerUI,
       config,
       stones,
@@ -319,6 +340,12 @@ function createCheckAnswersHandler({
       logSkillRatingDebug,
       timeLeft: getTimeLeft?.() ?? 0,
     });
+    onResult?.({
+      passed: Boolean(result?.passed),
+      targetWasCorrect: result?.targetWasCorrect,
+    });
+    return result;
+  };
 }
 
 export { checkAnswers, createCheckAnswersHandler };

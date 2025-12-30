@@ -65,6 +65,15 @@ import {
   resetGameStateUI,
   hideFeedbackPanel,
 } from './uiHelpers.js';
+import {
+  initFirstMoveHint,
+  handleFirstMoveInteraction,
+  showFirstMoveHintNow,
+  startCoachAfterTimerZero,
+  onAttemptResult,
+  getTargetInfo,
+  hideFirstMoveHint,
+} from './firstMoveHint.js';
 
 const intro = document.getElementById('intro');
 const difficulty = document.getElementById('difficulty');
@@ -452,13 +461,19 @@ const startBtn = document.getElementById('start-btn');
 const confirmModal = document.getElementById('confirmModal');
 const confirmYes = document.getElementById('confirmYes');
 const confirmNo = document.getElementById('confirmNo');
+const restartBtn = document.getElementById('restart-btn');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsHomeBtn = document.getElementById('settingsHomeBtn');
 const tapModeInputs = document.querySelectorAll('input[name="tapMode"]');
 const goldElement = document.getElementById('goldValue');
 
 const tutorialHasRun = localStorage.getItem(TUTORIAL_KEY) === '1';
-tutorialController.configure({ shouldRun: !saved && !tutorialHasRun });
+const tutorialEnabled = !saved && !tutorialHasRun;
+let tutorialCompleted = tutorialHasRun;
+tutorialController.configure({ shouldRun: tutorialEnabled });
+tutorialController.onComplete?.(() => {
+  tutorialCompleted = true;
+});
 
 function resetTutorialProgress() {
   tutorialController.reset();
@@ -550,6 +565,10 @@ confirmYes.addEventListener('click', () => {
 
 confirmNo.addEventListener('click', () => {
   confirmModal.classList.remove('active');
+});
+
+restartBtn?.addEventListener('click', () => {
+  confirmModal.classList.add('active');
 });
 
 // ---------- Utility ----------
@@ -755,6 +774,13 @@ async function startGame(mode) {
     setCheckButtonShowTimeout,
     logSkillRatingDebugFn: logSkillRatingDebug,
     checkAnswersFn: () => checkAnswers(),
+    onTimerFinished: () => {},
+    onTimerZero: () => {
+      console.log('[hint] triggering first move hint at timer zero');
+      if (tutorialCompleted) {
+        startCoachAfterTimerZero();
+      }
+    },
   });
   timerFlow.prepareTimerStart();
 
@@ -804,7 +830,7 @@ async function startGame(mode) {
   eyeGlassHandler = bonusFlow.eyeGlassHandler;
   eyeGlassBonus.addEventListener('click', eyeGlassHandler);
 
-  const { snapshot, stones } = await preparePuzzleData({
+  const { snapshot, stones, selectedGame } = await preparePuzzleData({
     boardDimension,
     config,
     currentMode,
@@ -843,6 +869,15 @@ async function startGame(mode) {
 
   const { getIntersectionRef, updateSequenceIntersectionsRef } =
     createIntersectionHelpers(board);
+
+  initFirstMoveHint({
+    boardEl: board,
+    getIntersectionRef,
+    boardSize: boardDimension,
+    selectedGame,
+    autoShow: false,
+  });
+  window.getTargetInfo = getTargetInfo;
 
   if (currentMode === 'sequence') {
     await playSequence(
@@ -921,17 +956,23 @@ async function startGame(mode) {
     return result;
   };
 
-  const handleCheckAnswers = createCheckAnswersHandler({
-    timerUI,
-    config,
-    stones,
-    currentMode,
-    speedMultiplier,
-    MAX_SPEED_BONUS_THRESHOLD,
-    freezeBarState,
-    addGold,
-    logSkillRatingDebug,
-    getTimeLeft: () => timerFlow.getTimeLeft(),
-  });
-  checkBtn.onclick = handleCheckAnswers;
+const handleCheckAnswers = createCheckAnswersHandler({
+  timerUI,
+  config,
+  stones,
+  currentMode,
+  speedMultiplier,
+  MAX_SPEED_BONUS_THRESHOLD,
+  freezeBarState,
+  addGold,
+  logSkillRatingDebug,
+  getTimeLeft: () => timerFlow.getTimeLeft(),
+  onResult: ({ passed, targetWasCorrect }) => {
+    onAttemptResult({ passed, targetWasCorrect });
+  },
+});
+checkBtn.onclick = () => {
+  hideFirstMoveHint({ markSeen: false });
+  handleCheckAnswers();
+};
 }

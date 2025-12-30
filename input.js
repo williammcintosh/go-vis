@@ -11,6 +11,8 @@ let deps = {
   setLastStoneTap: () => {},
 };
 
+import { handleFirstMoveInteraction } from './firstMoveHint.js';
+
 function setupInput(overrides = {}) {
   deps = { ...deps, ...overrides };
 }
@@ -121,6 +123,8 @@ function toggleStone(e) {
       });
     }
   }
+
+  handleFirstMoveInteraction({ hadWhite, hadBlack, element: p });
 }
 
 export {

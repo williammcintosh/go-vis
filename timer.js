@@ -46,8 +46,11 @@ function initTimerFlow({
   setCheckButtonShowTimeout,
   logSkillRatingDebugFn,
   checkAnswersFn,
+  onTimerFinished,
+  onTimerZero,
 }) {
   let timeLeft = config.time;
+  let timerZeroEmitted = false;
 
   const setTimeLeft = (v) => {
     timeLeft = v;
@@ -124,6 +127,12 @@ function initTimerFlow({
     updateBonusAvailabilityFn?.();
     timerUI?.setProgress?.(0);
     setTimeLeft(0);
+    if (!timerZeroEmitted) {
+      timerZeroEmitted = true;
+      console.log('[timer] timeLeft reached zero');
+      console.log('[timer] ZERO emit', { timeLeft, total: config.time });
+      onTimerZero?.();
+    }
     const existing = getCheckButtonShowTimeout?.();
     if (existing) {
       clearTimeout(existing);
@@ -135,6 +144,7 @@ function initTimerFlow({
         updateBonusAvailabilityFn?.();
       }
       setCheckButtonShowTimeout?.(null);
+      onTimerFinished?.();
     }, 100);
     setCheckButtonShowTimeout?.(timeout);
   };
@@ -250,10 +260,7 @@ function freezeBarStateNextFrame(reason, timeLeftRef, totalTime) {
       return;
     }
     const currentTimeLeft =
-      latestGame.timeLeft ??
-      timeLeftRef ??
-      latestGame?.puzzleConfig?.time ??
-      0;
+      latestGame.timeLeft ?? timeLeftRef ?? latestGame?.puzzleConfig?.time ?? 0;
     const total =
       Number(totalTime) ||
       Number(latestGame?.totalTime) ||
