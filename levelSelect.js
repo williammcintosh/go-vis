@@ -137,6 +137,7 @@ function createLevelSelectController({
   difficultyEl,
   mainGameEl,
   showScreen,
+  setPageType = () => {},
   setMode,
   setNextPuzzleSuggestion,
   startGame,
@@ -198,7 +199,7 @@ function createLevelSelectController({
         display: none;
         flex-direction: column;
         align-items: center;
-        padding: 3.35rem 1.2rem 2.25rem;
+        padding: calc(var(--header-height, 72px) + 0.85rem) 1.2rem 2.25rem;
         opacity: 0;
         pointer-events: none;
         transition: opacity 200ms ease;
@@ -725,8 +726,7 @@ function createLevelSelectController({
       const boardKey = `${size}x${size}`;
       const locked = !isBoardUnlocked(size, rating);
       const card = document.createElement('div');
-      card.className =
-        'mode-card mode-card--horizontal level-select__board-card';
+      card.className = 'mode-card level-select__board-card';
       if (locked) card.classList.add('locked');
       if (state.selection?.boardSize === size) card.classList.add('selected');
 
@@ -922,7 +922,10 @@ function createLevelSelectController({
     difficultyEl?.classList.remove('active');
     introEl?.classList.remove('active');
     screen?.classList.add('active');
+    setPageType?.('boardSelect');
     document.body.classList.add('level-select-open');
+    document.body.classList.remove('badges-hidden');
+    document.body.classList.add('badges-visible');
     await Promise.all([ensureUnlocks(), ensureTotals()]);
     await renderBoards();
   }

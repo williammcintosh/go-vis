@@ -9,33 +9,46 @@
 
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body>
+  <body data-page="home">
     <header class="site-header">
-      <div class="brand">
-        <img src="./images/go-icon.png" alt="Go Viz logo" class="brand-logo" />
-        <span class="brand-name">Go Viz</span>
+      <div class="site-header__content site-header__content--brand">
+        <div class="site-header__section site-header__section--left">
+          <div class="brand">
+            <img
+              src="./images/go-icon.png"
+              alt="Go Viz logo"
+              class="brand-logo"
+            />
+            <span class="brand-name">Go Viz</span>
+          </div>
+        </div>
+        <div class="site-header__section site-header__section--right">
+          <div id="account-area" class="account-area" aria-live="polite"></div>
+        </div>
       </div>
-      <div id="account-area" class="account-area" aria-live="polite"></div>
+      <div class="site-header__content site-header__content--badges">
+        <div class="site-header__section site-header__section--left">
+          <div id="goldBadge" class="gold-badge badge" aria-live="polite">
+            <div class="gold-badge__frame">
+              <div class="gold-badge__core">
+                <span id="goldValue" class="gold-badge__value">0</span>
+                <span class="gold-badge__label">Gold</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="site-header__section site-header__section--right">
+          <div id="skillBadge" class="skill-badge badge" aria-live="polite">
+            <div class="skill-badge__frame">
+              <div class="skill-badge__core">
+                <span id="skillRatingText" class="skill-badge__value">--</span>
+                <span class="skill-badge__label">Skill</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </header>
-
-    <div id="topBar">
-      <div id="goldBadge" class="gold-badge badge" aria-live="polite">
-        <div class="gold-badge__frame">
-          <div class="gold-badge__core">
-            <span id="goldValue" class="gold-badge__value">0</span>
-            <span class="gold-badge__label">Gold</span>
-          </div>
-        </div>
-      </div>
-      <div id="skillBadge" class="skill-badge badge" aria-live="polite">
-        <div class="skill-badge__frame">
-          <div class="skill-badge__core">
-            <span id="skillRatingText" class="skill-badge__value">--</span>
-            <span class="skill-badge__label">Skill</span>
-          </div>
-        </div>
-      </div>
-    </div>
     <div id="intro" class="screen active">
       <div class="hero">
         <p class="hero-tagline">Train your Go memory and visualization.</p>

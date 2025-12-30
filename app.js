@@ -87,6 +87,16 @@ const TAP_MODES = {
   CLASSIC: 'classic',
   TOGGLE: 'toggle',
 };
+const PAGE_TYPES = {
+  HOME: 'home',
+  DIFFICULTY: 'difficulty',
+  BOARD_SELECT: 'boardSelect',
+  GAMEPLAY: 'gameplay',
+};
+const BADGE_PAGE_SET = new Set([
+  PAGE_TYPES.BOARD_SELECT,
+  PAGE_TYPES.GAMEPLAY,
+]);
 let speedMultiplier = 1;
 let lastTap = 0;
 let lastStoneTap = { time: 0, target: null };
@@ -119,6 +129,13 @@ function setScrollLock(isLocked) {
 
 function setHeaderHidden(isHidden) {
   document.body.classList.toggle('header-hidden', Boolean(isHidden));
+}
+
+function setPageType(page) {
+  const pageValue =
+    Object.values(PAGE_TYPES).find((value) => value === page) || PAGE_TYPES.HOME;
+  document.body.dataset.page = pageValue;
+  setBadgesVisible(BADGE_PAGE_SET.has(pageValue));
 }
 
 function setModeProgressRowText({
@@ -239,6 +256,19 @@ const showSkillBadge = () => {
     skillBadge.classList.add('is-visible');
   }
 };
+
+function setBadgesVisible(isVisible) {
+  const actionVisible = isVisible ? 'add' : 'remove';
+  const actionHidden = isVisible ? 'remove' : 'add';
+  document.body.classList[actionVisible]('badges-visible');
+  document.body.classList[actionHidden]('badges-hidden');
+  [goldBadge, skillBadge].forEach((badge) => {
+    if (!badge) return;
+    badge.style.opacity = isVisible ? '1' : '0';
+    badge.style.pointerEvents = isVisible ? 'auto' : 'none';
+  });
+}
+
 const renderSkillRatingAll = (rating, fallback) => {
   const value = renderSkillRating(skillRatingEl, rating, fallback);
   if (skillRatingEl) {
@@ -248,6 +278,7 @@ const renderSkillRatingAll = (rating, fallback) => {
   return value;
 };
 renderSkillRatingAll(difficultyState.rating, difficultyState?.rating);
+setPageType(document.body.dataset.page || PAGE_TYPES.HOME);
 
 function normalizeProgress(progress = {}) {
   return {
@@ -522,9 +553,19 @@ confirmNo.addEventListener('click', () => {
 });
 
 // ---------- Utility ----------
+const PAGE_TYPE_BY_SCREEN = new Map([
+  [intro, PAGE_TYPES.HOME],
+  [difficulty, PAGE_TYPES.DIFFICULTY],
+  [settingsModal, PAGE_TYPES.HOME],
+]);
+
 function showScreen(show, hide) {
   if (show === difficulty) {
     updateModeStatuses();
+  }
+  const nextPage = PAGE_TYPE_BY_SCREEN.get(show);
+  if (nextPage) {
+    setPageType(nextPage);
   }
   setHeaderHidden(false);
   hide.classList.remove('active');
@@ -536,6 +577,7 @@ levelSelectController = createLevelSelectController({
   difficultyEl: difficulty,
   mainGameEl: mainGame,
   showScreen,
+  setPageType,
   setMode: (mode) => {
     currentMode = mode;
     window.currentMode = mode;
@@ -559,6 +601,7 @@ document.getElementById('homeBtn').onclick = () => {
 // ---------- Difficulty Selection ----------
 document.querySelectorAll('.diffBtn').forEach((b) => {
   b.onclick = () => {
+    setPageType(PAGE_TYPES.BOARD_SELECT);
     showGoldBadge();
     showSkillBadge();
     setHeaderHidden(false);
@@ -620,7 +663,8 @@ nextBtn.onclick = async () => {
 
 // ---------- Main Game ----------
 async function startGame(mode) {
-  setHeaderHidden(true);
+  setHeaderHidden(false);
+  setPageType(PAGE_TYPES.GAMEPLAY);
   cleanupFloatingRewards();
   setScrollLock(true);
   showGoldBadge();
