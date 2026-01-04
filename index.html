@@ -13,7 +13,14 @@
     <header class="site-header">
       <div class="site-header__content site-header__content--brand">
         <div class="site-header__section site-header__section--left">
-          <div class="brand">
+          <div
+            class="brand"
+            id="aboutTrigger"
+            role="button"
+            tabindex="0"
+            aria-label="Open About"
+            style="cursor: pointer"
+          >
             <img
               src="./images/go-icon.png"
               alt="Go Viz logo"
@@ -53,6 +60,54 @@
       <div class="hero">
         <p class="hero-tagline">Train your Go memory and visualization.</p>
         <button id="start-btn" class="primary-action">Play</button>
+      </div>
+    </div>
+
+    <div id="aboutModal" class="modal" aria-hidden="true">
+      <div
+        class="modal-content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="aboutModalTitle"
+        style="
+          max-width: 780px;
+          width: min(92vw, 780px);
+          text-align: center;
+          padding: 24px;
+        "
+      >
+        <h1 id="aboutModalTitle" style="margin: 0">About</h1>
+        <p style="opacity: 0.9; margin: 0 auto; max-width: 720px">
+          Read Go Fast is a Go memory and visualization trainer focused on fast
+          pattern recognition and reading at a glance.
+        </p>
+
+        <section style="margin: 0">
+          <h2 style="margin: 0">App version</h2>
+          <p style="margin: 0">Version: <span>v1.0.0</span></p>
+        </section>
+
+        <section style="margin: 0">
+          <h2 style="margin: 0">Contact</h2>
+          <p style="margin: 0">
+            <a href="mailto:will@wmm.co.nz">will@wmm.co.nz</a>
+          </p>
+        </section>
+
+        <section style="margin: 0">
+          <h2 style="margin: 0">Legal</h2>
+          <p style="margin: 0">
+            <a href="privacy.html">Privacy Policy</a> ·
+            <a href="terms.html">Terms of Service</a>
+          </p>
+        </section>
+
+        <p style="margin: 0">
+          <a href="index.html">Back to Home</a>
+        </p>
+        <button id="aboutClose" style="padding: 10px 18px; min-width: 140px">
+          Close
+        </button>
       </div>
     </div>
 
@@ -201,6 +256,42 @@
     <div id="tutorialSkip" class="tutorial-skip tutorial-hidden">
       <button id="tutorialSkipBtn">Skip tutorial</button>
     </div>
+
+    <script>
+      (() => {
+        const trigger = document.getElementById('aboutTrigger');
+        const modal = document.getElementById('aboutModal');
+        const closeBtn = document.getElementById('aboutClose');
+
+        if (!trigger || !modal) return;
+
+        const open = () => {
+          modal.classList.add('active');
+          modal.setAttribute('aria-hidden', 'false');
+        };
+
+        const close = () => {
+          modal.classList.remove('active');
+          modal.setAttribute('aria-hidden', 'true');
+          trigger.focus();
+        };
+
+        trigger.addEventListener('click', open);
+        trigger.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            open();
+          }
+        });
+
+        closeBtn?.addEventListener('click', close);
+        modal.addEventListener('click', (event) => {
+          if (event.target === modal) {
+            close();
+          }
+        });
+      })();
+    </script>
 
     <script type="module" src="./firebase-init.js"></script>
     <script src="board-logic.js"></script>

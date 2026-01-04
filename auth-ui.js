@@ -83,8 +83,23 @@ function renderAccountArea(user) {
     authApi?.logout();
   });
 
+  const restartBtn = document.createElement('button');
+  restartBtn.type = 'button';
+  restartBtn.className = 'account-menu__item';
+  restartBtn.textContent = 'Restart';
+  restartBtn.addEventListener('click', () => {
+    closeMenu();
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+      modal.classList.add('active');
+    } else {
+      console.warn('Confirm modal not found for restart');
+    }
+  });
+
   menu.appendChild(switchBtn);
   menu.appendChild(logoutBtn);
+  menu.appendChild(restartBtn);
 
   const handleOutside = (event) => {
     if (menu.contains(event.target) || chip.contains(event.target)) return;
