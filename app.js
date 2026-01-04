@@ -461,7 +461,6 @@ const startBtn = document.getElementById('start-btn');
 const confirmModal = document.getElementById('confirmModal');
 const confirmYes = document.getElementById('confirmYes');
 const confirmNo = document.getElementById('confirmNo');
-const restartBtn = document.getElementById('restart-btn');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsHomeBtn = document.getElementById('settingsHomeBtn');
 const tapModeInputs = document.querySelectorAll('input[name="tapMode"]');
@@ -565,10 +564,6 @@ confirmYes.addEventListener('click', () => {
 
 confirmNo.addEventListener('click', () => {
   confirmModal.classList.remove('active');
-});
-
-restartBtn?.addEventListener('click', () => {
-  confirmModal.classList.add('active');
 });
 
 // ---------- Utility ----------

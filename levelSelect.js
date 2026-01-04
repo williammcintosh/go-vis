@@ -305,18 +305,6 @@ function createLevelSelectController({
         width: 100%;
         filter: drop-shadow(0 4px 10px rgba(0,0,0,0.08));
       }
-      .level-select__board-card.locked .level-select__board-icon img,
-      .level-select__board-card.locked button {
-        filter: grayscale(1);
-      }
-      .level-select__board-card .diffBtn.locked {
-        background: #dcdcdc !important;
-        background-image: none !important;
-        border-color: #bdbdbd !important;
-        color: #4a4a4a !important;
-        box-shadow: none;
-        cursor: not-allowed;
-      }
       .level-select__board-lock-wrap {
         position: relative;
         overflow: hidden;
@@ -346,10 +334,6 @@ function createLevelSelectController({
         gap: 0.25rem;
         text-align: center;
         width: 100%;
-      }
-      .level-select__board-card .diffBtn {
-        width: 100%;
-        max-width: 320px;
       }
       .level-select__drawer {
         width: 100%;
@@ -408,33 +392,6 @@ function createLevelSelectController({
         align-items: center;
         min-width: 0;
       }
-      .level-select__stone-btn {
-        border-radius: 10px;
-        border: 2px solid rgba(70, 116, 65, 0.6);
-        background: linear-gradient(180deg, #66bb6a 0%, #43a047 100%);
-        color: #0b360f;
-        padding: 0.85rem 1.2rem;
-        font-weight: 800;
-        font-size: 1.1rem;
-        cursor: pointer;
-        transition: transform 120ms ease, box-shadow 120ms ease;
-        width: 100%;
-        max-width: 420px;
-        box-sizing: border-box;
-      }
-      .level-select__stone-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 8px 14px rgba(0, 0, 0, 0.18);
-      }
-      .level-select__stone-btn.selected {
-        box-shadow: 0 10px 18px rgba(46, 125, 50, 0.28);
-      }
-      .level-select__stone-btn.locked {
-        background: #dcdcdc !important;
-        background-image: none !important;
-        border-color: #bdbdbd !important;
-        color: #4a4a4a !important;
-      }
       .level-select__stone-lock {
         position: absolute;
         width: 22px;
@@ -466,20 +423,10 @@ function createLevelSelectController({
         font-size: 0.9rem;
         color: #2f3d2f;
       }
-      .level-select__back {
-        border-radius: 10px;
-        padding: 0.65rem 0.9rem;
-        min-width: 92px;
-        justify-self: start;
-        width: min(320px, 100%);
-      }
       @media (max-width: 540px) {
         .level-select__header {
           grid-template-columns: 1fr;
           justify-items: center;
-        }
-        .level-select__back {
-          justify-self: center;
         }
         .level-select__heading {
           font-size: 1.5rem;

@@ -23,6 +23,7 @@ function renderAccountArea(user) {
   if (!accountArea) return;
   closeMenu();
   accountArea.innerHTML = '';
+  accountArea.classList.toggle('logged-in', Boolean(user));
 
   if (!user) {
     const loginBtn = document.createElement('button');
