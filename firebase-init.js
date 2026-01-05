@@ -95,8 +95,12 @@ window.goVisDB = {
     const speedBonus = Boolean(
       solvePhase.maxSpeedBonus || solvePhase.speedBonusUsed
     );
+    const barRatio = Number(timerPhase.barRatioAtHide);
     const timer75Skip =
-      skipped && Number(timerPhase.barRatioAtHide) >= 0.75;
+      (skipped ||
+        (typeof rewardPhase.rewardRuleTriggered === 'string' &&
+          rewardPhase.rewardRuleTriggered.includes('skip75'))) &&
+      barRatio >= 0.75;
     const firstTry =
       completed && rewardPhase.rewardRuleTriggered !== 'retry';
     const isRetry = rewardPhase.rewardRuleTriggered === 'retry';
