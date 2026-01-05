@@ -254,7 +254,7 @@ function createLevelSelectController({
       }
       .level-select__eyebrow {
         font-size: 0.9rem;
-        color: #0b360f;
+        color: var(--text-accent-dark);
         opacity: 0.8;
         margin: 0;
       }
@@ -292,8 +292,8 @@ function createLevelSelectController({
         opacity: 0.7;
       }
       .level-select__board-card.selected {
-        border: 2px solid rgba(46, 125, 50, 0.35);
-        box-shadow: 0 14px 32px rgba(46, 125, 50, 0.16);
+        border: 2px solid rgba(var(--accent-shadow-rgb), 0.35);
+        box-shadow: 0 14px 32px rgba(var(--accent-shadow-rgb), 0.16);
       }
       .level-select__board-icon {
         position: relative;
@@ -303,7 +303,7 @@ function createLevelSelectController({
       .level-select__board-icon img {
         display: block;
         width: 100%;
-        filter: drop-shadow(0 4px 10px rgba(0,0,0,0.08));
+        filter: drop-shadow(0 4px 10px var(--shadow-ambient-color));
       }
       .level-select__board-lock-wrap {
         position: relative;
@@ -348,11 +348,11 @@ function createLevelSelectController({
         padding: 0.75rem 0 0.6rem;
       }
       .level-select__drawer-content {
-        background: rgba(255, 255, 255, 0.86);
+        background: var(--card-overlay-strong);
         border-radius: 12px;
         padding: 0.75rem;
-        border: 2px solid rgba(70, 116, 65, 0.18);
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+        border: 2px solid rgba(var(--accent-shadow-rgb), 0.18);
+        box-shadow: 0 6px 18px var(--shadow-ambient-color);
         width: 100%;
         box-sizing: border-box;
       }
@@ -369,11 +369,11 @@ function createLevelSelectController({
         letter-spacing: 0.12em;
       }
       .level-select__stones {
-        background: rgba(255, 255, 255, 0.8);
+        background: var(--card-overlay-soft);
         border-radius: 14px;
         padding: 0.85rem 0.85rem 0.35rem;
-        border: 2px solid rgba(70, 116, 65, 0.4);
-        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+        border: 2px solid rgba(var(--level-border-rgb), 0.4);
+        box-shadow: 0 6px 14px var(--shadow-ambient-color);
         width: 100%;
         box-sizing: border-box;
       }
@@ -411,7 +411,7 @@ function createLevelSelectController({
         margin: 0;
         font-size: 0.9rem;
         text-align: center;
-        color: #2f3d2f;
+        color: var(--text-olive);
       }
       .level-select__stone-header {
         margin: 0 0 0.5rem;
@@ -421,7 +421,7 @@ function createLevelSelectController({
       .level-select__note {
         margin: 0.25rem 0 0.75rem;
         font-size: 0.9rem;
-        color: #2f3d2f;
+        color: var(--text-olive);
       }
       @media (max-width: 540px) {
         .level-select__header {
