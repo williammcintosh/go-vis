@@ -103,9 +103,6 @@ function renderAccountArea(user) {
   chip.appendChild(avatar);
   chip.appendChild(name);
 
-  const menu = document.createElement('div');
-  menu.className = 'account-menu';
-
   const switchBtn = document.createElement('button');
   switchBtn.type = 'button';
   switchBtn.className = 'account-menu__item';
