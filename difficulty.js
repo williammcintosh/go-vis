@@ -612,6 +612,18 @@ function createDifficultyOutcomeRecorder({
       },
     };
 
+    const skillRatingPayload = { ...debugPayload, ratingResult };
+    if (window.goVisDB?.recordRound) {
+      console.log('[CLOUD][STATS] Trigger recordRound');
+      window.goVisDB
+        .recordRound(skillRatingPayload)
+        .catch((err) =>
+          console.error('[CLOUD][STATS] Failed to record round', err)
+        );
+    } else {
+      console.warn('[CLOUD][STATS] goVisDB.recordRound not available');
+    }
+
     logSkillRatingDebug?.(debugPayload);
     writeSkillDebug?.(
       {

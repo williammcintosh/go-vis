@@ -12,6 +12,8 @@ import {
   getDoc,
   setDoc,
   serverTimestamp,
+  runTransaction,
+  increment,
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -28,6 +30,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const db = getFirestore(app);
+const getUserDocRef = (uid) => doc(db, 'users', uid);
 
 window.goVisAuth = {
   login: () => signInWithPopup(auth, provider),
@@ -37,12 +40,12 @@ window.goVisAuth = {
 
 window.goVisData = {
   loadProgress: async (uid) => {
-    const snap = await getDoc(doc(db, 'users', uid));
+    const snap = await getDoc(getUserDocRef(uid));
     return snap.exists() ? snap.data() : null;
   },
   saveProgress: async (uid, progress) => {
     await setDoc(
-      doc(db, 'users', uid),
+      getUserDocRef(uid),
       {
         ...progress,
         updatedAt: serverTimestamp(),
@@ -66,14 +69,112 @@ window.goVisDB = {
       updatedAt: serverTimestamp(),
     };
     console.log('[CLOUD] Saving progress for', user.uid, payload);
-    await setDoc(doc(db, 'users', user.uid), payload, { merge: true });
+    await setDoc(getUserDocRef(user.uid), payload, { merge: true });
   },
   loadProgress: async () => {
     const user = requireUser();
-    const snap = await getDoc(doc(db, 'users', user.uid));
+    const snap = await getDoc(getUserDocRef(user.uid));
     if (!snap.exists()) return null;
     const data = snap.data();
     return data?.progress ?? null;
+  },
+  recordRound: async (skillRating) => {
+    const user = requireUser();
+    if (!skillRating) {
+      console.warn('[CLOUD][STATS] Missing skillRating payload');
+      return;
+    }
+
+    const docRef = getUserDocRef(user.uid);
+    const meta = skillRating.meta || {};
+    const timerPhase = skillRating.timerPhase || {};
+    const solvePhase = skillRating.solvePhase || {};
+    const rewardPhase = skillRating.rewardPhase || {};
+    const completed = Boolean(meta.completed);
+    const skipped = Boolean(meta.playerSkipped || timerPhase.playerSkipped);
+    const speedBonus = Boolean(
+      solvePhase.maxSpeedBonus || solvePhase.speedBonusUsed
+    );
+    const timer75Skip =
+      skipped && Number(timerPhase.barRatioAtHide) >= 0.75;
+    const firstTry =
+      completed && rewardPhase.rewardRuleTriggered !== 'retry';
+    const isRetry = rewardPhase.rewardRuleTriggered === 'retry';
+
+    const miscUpdates = {};
+    const gold = Number(window?.gameState?.gold);
+    if (Number.isFinite(gold)) miscUpdates.gold = gold;
+    const skill = Number(
+      skillRating.ratingResult?.rating ?? skillRating.rating
+    );
+    if (Number.isFinite(skill)) miscUpdates.skill = skill;
+
+    console.log('[CLOUD][STATS] Recording round for', user.uid, {
+      completed,
+      skipped,
+      firstTry,
+      speedBonus,
+      timer75Skip,
+      isRetry,
+      gold: miscUpdates.gold,
+      skill: miscUpdates.skill,
+    });
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(docRef);
+        const prevStats = snap.exists() ? snap.data()?.stats || {} : {};
+        const prevTotals = prevStats.totals || {};
+        const prevStreaks = prevStats.streaks || {};
+        const totals = {
+          attempts: Number(prevTotals.attempts) || 0,
+          completed: Number(prevTotals.completed) || 0,
+          firstTryWins: Number(prevTotals.firstTryWins) || 0,
+          retries: Number(prevTotals.retries) || 0,
+          skips: Number(prevTotals.skips) || 0,
+          maxSpeedBonusCount: Number(prevTotals.maxSpeedBonusCount) || 0,
+          speedBonusUsedCount: Number(prevTotals.speedBonusUsedCount) || 0,
+          timer75SkipCount: Number(prevTotals.timer75SkipCount) || 0,
+        };
+
+        totals.attempts += 1;
+        if (completed) totals.completed += 1;
+        if (firstTry) totals.firstTryWins += 1;
+        if (isRetry) totals.retries += 1;
+        if (skipped) totals.skips += 1;
+        if (solvePhase.maxSpeedBonus) totals.maxSpeedBonusCount += 1;
+        if (solvePhase.speedBonusUsed) totals.speedBonusUsedCount += 1;
+        if (timer75Skip) totals.timer75SkipCount += 1;
+
+        const nextStreaks = {
+          winStreak:
+            completed && !skipped
+              ? (Number(prevStreaks.winStreak) || 0) + 1
+              : 0,
+          firstTryStreak: firstTry
+            ? (Number(prevStreaks.firstTryStreak) || 0) + 1
+            : 0,
+          speedBonusStreak:
+            speedBonus && completed
+              ? (Number(prevStreaks.speedBonusStreak) || 0) + 1
+              : 0,
+          lastResult: skipped ? 'skip' : completed ? 'win' : 'fail',
+        };
+
+        transaction.set(
+          docRef,
+          {
+            ...miscUpdates,
+            stats: { totals, streaks: nextStreaks },
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      });
+      console.log('[CLOUD][STATS] Round recorded for', user.uid);
+    } catch (err) {
+      console.error('[CLOUD][STATS] Failed to record round', err);
+    }
   },
 };
 
