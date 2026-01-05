@@ -34,21 +34,40 @@
         </div>
       </div>
       <div class="site-header__content site-header__content--badges">
-        <div class="site-header__section site-header__section--left">
-          <div id="goldBadge" class="gold-badge badge" aria-live="polite">
-            <div class="gold-badge__frame">
-              <div class="gold-badge__core">
-                <span id="goldValue" class="gold-badge__value">0</span>
-                <span class="gold-badge__label">Gold</span>
-              </div>
+      <div class="site-header__section site-header__section--left">
+        <div id="goldBadge" class="gold-badge badge" aria-live="polite">
+          <div class="gold-badge__frame">
+            <div class="gold-badge__core">
+              <span id="goldValue" class="gold-badge__value">0</span>
+              <span class="gold-badge__label">Gold</span>
             </div>
           </div>
         </div>
-        <div class="site-header__section site-header__section--right">
-          <div id="skillBadge" class="skill-badge badge" aria-live="polite">
-            <div class="skill-badge__frame">
-              <div class="skill-badge__core">
-                <span id="skillRatingText" class="skill-badge__value">--</span>
+      </div>
+      <div class="site-header__section site-header__section--center">
+        <button
+          id="gameAvatar"
+          class="game-avatar-btn"
+          type="button"
+          aria-label="Account"
+          aria-haspopup="true"
+          aria-expanded="false"
+        >
+          <img
+            id="gameAvatarImg"
+            class="game-avatar-img"
+            src="./images/not-logged-in-avatar.png"
+            alt="Account avatar"
+            width="40"
+            height="40"
+          />
+        </button>
+      </div>
+      <div class="site-header__section site-header__section--right">
+        <div id="skillBadge" class="skill-badge badge" aria-live="polite">
+          <div class="skill-badge__frame">
+            <div class="skill-badge__core">
+              <span id="skillRatingText" class="skill-badge__value">--</span>
                 <span class="skill-badge__label">Skill</span>
               </div>
             </div>

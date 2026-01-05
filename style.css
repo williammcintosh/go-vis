@@ -319,6 +319,34 @@ body[data-page='difficulty'] .site-header__content--badges {
   transform: translateY(0);
 }
 
+.site-header__section--center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+}
+
+.game-avatar-btn {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-avatar-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--text-contrast);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  background: var(--card-bg);
+}
+
 @media (max-width: 520px) {
   .brand-name {
     font-size: 1rem;
@@ -1670,7 +1698,8 @@ body.badges-visible:not(.badges-hidden) .site-header__content--badges .badge {
     var(--badge-frame-dark) 0deg 205deg,
     var(--badge-frame-light) 205deg 360deg
   );
-  padding: 0.6rem 0.6rem;
+  /* Thinner frame padding to shrink badge frame without changing text size */
+  padding: 0.3rem 0.3rem;
   border-radius: 26px;
   box-shadow: none;
   overflow: hidden;
@@ -1744,7 +1773,7 @@ body.badges-visible:not(.badges-hidden) .site-header__content--badges .badge {
     var(--badge-frame-dark) 0deg 205deg,
     var(--badge-gold-frame) 205deg 360deg
   );
-  padding: 0.6rem 0.6rem;
+  padding: 0.3rem 0.3rem;
   border-radius: 26px;
   box-shadow: none;
   overflow: hidden;
@@ -2124,11 +2153,7 @@ body.badges-visible:not(.badges-hidden) .site-header__content--badges .badge {
   .site-header__content--badges {
     gap: clamp(0.2rem, 0.8vw, 0.6rem);
   }
-  .site-header__content--badges .badge,
-  #goldBadge,
-  #skillBadge {
-    width: clamp(110px, 36vw, 150px);
-  }
+  /* Removing fixed badge width on small screens to keep badges lighter and avoid chunky look */
   #gameHeader {
     font-size: 0.95em;
     flex: 0 1 24%;

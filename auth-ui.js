@@ -21,17 +21,66 @@ function closeMenu() {
 
 function renderAccountArea(user) {
   if (!accountArea) return;
+  const badgeAvatarBtn = document.getElementById('gameAvatar');
+  const badgeAvatarImg = document.getElementById('gameAvatarImg');
   closeMenu();
   accountArea.innerHTML = '';
   accountArea.classList.toggle('logged-in', Boolean(user));
 
+  const menu = document.createElement('div');
+  menu.className = 'account-menu';
+
+  const setBadgeAvatar = (src, alt) => {
+    if (badgeAvatarImg) {
+      badgeAvatarImg.src = src;
+      badgeAvatarImg.alt = alt;
+    }
+  };
+
+  const handleOutside = (event) => {
+    if (menu.contains(event.target) || currentTrigger?.contains(event.target))
+      return;
+    closeMenu();
+  };
+
+  const toggleMenu = (event, triggerEl) => {
+    event.stopPropagation();
+    const isOpen = menu.classList.contains('open');
+    closeMenu();
+    if (!isOpen) {
+      menu.classList.add('open');
+      if (triggerEl) triggerEl.setAttribute('aria-expanded', 'true');
+      openMenu = menu;
+      currentTrigger = triggerEl || null;
+      detachOutside = () => document.removeEventListener('click', handleOutside, true);
+      document.addEventListener('click', handleOutside, true);
+    }
+  };
+
   if (!user) {
+    setBadgeAvatar('./images/not-logged-in-avatar.png', 'Anonymous avatar');
+
     const loginBtn = document.createElement('button');
     loginBtn.type = 'button';
     loginBtn.className = 'account-button';
     loginBtn.textContent = 'Log in';
     loginBtn.addEventListener('click', () => authApi?.login());
     accountArea.appendChild(loginBtn);
+
+    const loginMenuItem = document.createElement('button');
+    loginMenuItem.type = 'button';
+    loginMenuItem.className = 'account-menu__item';
+    loginMenuItem.textContent = 'Log in';
+    loginMenuItem.addEventListener('click', () => {
+      closeMenu();
+      authApi?.login();
+    });
+    menu.appendChild(loginMenuItem);
+
+    accountArea.appendChild(menu);
+    if (badgeAvatarBtn) {
+      badgeAvatarBtn.onclick = (event) => toggleMenu(event, badgeAvatarBtn);
+    }
     return;
   }
 
@@ -45,6 +94,7 @@ function renderAccountArea(user) {
   avatar.className = 'account-avatar';
   avatar.src = user.photoURL || './images/go-icon.png';
   avatar.alt = user.displayName ? `${user.displayName} avatar` : 'User avatar';
+  setBadgeAvatar(avatar.src, avatar.alt);
 
   const name = document.createElement('span');
   name.className = 'account-name';
@@ -98,31 +148,23 @@ function renderAccountArea(user) {
   });
 
   menu.appendChild(switchBtn);
+  const accountBtn = document.createElement('button');
+  accountBtn.type = 'button';
+  accountBtn.className = 'account-menu__item';
+  accountBtn.textContent = 'Account';
+  accountBtn.addEventListener('click', () => {
+    closeMenu();
+  });
+  menu.appendChild(accountBtn);
   menu.appendChild(logoutBtn);
   menu.appendChild(restartBtn);
-
-  const handleOutside = (event) => {
-    if (menu.contains(event.target) || chip.contains(event.target)) return;
-    closeMenu();
-  };
-
-  const toggleMenu = (event) => {
-    event.stopPropagation();
-    const isOpen = menu.classList.contains('open');
-    closeMenu();
-    if (!isOpen) {
-      menu.classList.add('open');
-      chip.setAttribute('aria-expanded', 'true');
-      openMenu = menu;
-      currentTrigger = chip;
-      detachOutside = () => document.removeEventListener('click', handleOutside, true);
-      document.addEventListener('click', handleOutside, true);
-    }
-  };
-
-  chip.addEventListener('click', toggleMenu);
+  chip.addEventListener('click', (event) => toggleMenu(event, chip));
   accountArea.appendChild(chip);
   accountArea.appendChild(menu);
+
+  if (badgeAvatarBtn) {
+    badgeAvatarBtn.onclick = (event) => toggleMenu(event, badgeAvatarBtn);
+  }
 }
 window.renderAccountArea = renderAccountArea;
 
