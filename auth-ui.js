@@ -155,14 +155,15 @@ function renderAccountArea(user) {
   });
 
   menu.appendChild(switchBtn);
-  const accountBtn = document.createElement('button');
-  accountBtn.type = 'button';
-  accountBtn.className = 'account-menu__item';
-  accountBtn.textContent = 'Account';
-  accountBtn.addEventListener('click', () => {
+  const profileBtn = document.createElement('button');
+  profileBtn.type = 'button';
+  profileBtn.className = 'account-menu__item';
+  profileBtn.textContent = 'Profile';
+  profileBtn.addEventListener('click', () => {
     closeMenu();
+    window.location.href = 'profile.html';
   });
-  menu.appendChild(accountBtn);
+  menu.appendChild(profileBtn);
   menu.appendChild(logoutBtn);
   menu.appendChild(restartBtn);
   chip.addEventListener('click', (event) => toggleMenu(event, chip));

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Player Profile</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="profile.css" />
+  </head>
+  <body class="profile-page">
+    <header class="profile-header">
+      <button id="backBtn" class="profile-back">← Back</button>
+      <h1 class="profile-title">Player Profile</h1>
+    </header>
+
+    <main id="profileContent" class="profile-content" aria-live="polite">
+      <div class="profile-card profile-card--identity" id="identityCard">
+        <div class="profile-card__top">
+          <img
+            id="profileAvatar"
+            class="profile-avatar"
+            src="./images/not-logged-in-avatar.png"
+            alt="Profile avatar"
+          />
+          <div class="profile-id">
+            <div id="profileName" class="profile-name">Player</div>
+            <div id="profileEmail" class="profile-email"></div>
+          </div>
+        </div>
+        <div class="profile-metrics">
+          <div class="metric">
+            <div class="metric-label">Skill</div>
+            <div id="profileSkill" class="metric-value">--</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Gold</div>
+            <div id="profileGold" class="metric-value">--</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Time played</div>
+            <div id="profileTime" class="metric-value metric-value--muted">
+              Coming soon
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-card" id="streaksCard">
+        <div class="profile-card__header">
+          <h2>Streaks</h2>
+          <div id="lastResult" class="profile-chip profile-chip--muted"></div>
+        </div>
+        <div class="profile-streaks">
+          <div class="streak">
+            <div class="streak-label">Win streak</div>
+            <div id="streakWin" class="streak-value">0</div>
+          </div>
+          <div class="streak">
+            <div class="streak-label">First try</div>
+            <div id="streakFirstTry" class="streak-value">0</div>
+          </div>
+          <div class="streak">
+            <div class="streak-label">Speed</div>
+            <div id="streakSpeed" class="streak-value">0</div>
+          </div>
+        </div>
+      </div>
+
+      <section id="progressSection" class="profile-section">
+        <div class="profile-section__header">
+          <h2>Progress</h2>
+        </div>
+        <div id="progressCards" class="profile-grid"></div>
+      </section>
+
+      <div class="profile-card profile-card--collapsible" id="totalsCard">
+        <button id="totalsToggle" class="profile-card__header profile-card__header--button">
+          <h2>Totals</h2>
+          <span id="totalsChevron">▼</span>
+        </button>
+        <div id="totalsBody" class="profile-totals" hidden>
+          <div class="total-row">
+            <span>Attempts</span><strong id="totalAttempts">0</strong>
+          </div>
+          <div class="total-row">
+            <span>Completed</span><strong id="totalCompleted">0</strong>
+          </div>
+          <div class="total-row">
+            <span>First try wins</span><strong id="totalFirstTryWins">0</strong>
+          </div>
+          <div class="total-row">
+            <span>Retries</span><strong id="totalRetries">0</strong>
+          </div>
+          <div class="total-row">
+            <span>Skips</span><strong id="totalSkips">0</strong>
+          </div>
+          <div class="total-row">
+            <span>Max speed bonus</span><strong id="totalMaxSpeedBonus">0</strong>
+          </div>
+          <div class="total-row">
+            <span>Speed bonus used</span><strong id="totalSpeedBonusUsed">0</strong>
+          </div>
+          <div class="total-row">
+            <span>75% timer skips</span><strong id="totalTimer75">0</strong>
+          </div>
+        </div>
+      </div>
+
+      <div id="profileEmpty" class="profile-empty" hidden>
+        <p>Log in to sync and track your progress.</p>
+        <button id="loginBtn" class="profile-primary">Log in</button>
+      </div>
+    </main>
+
+    <script type="module" src="./firebase-init.js"></script>
+    <script type="module" src="./profile.js"></script>
+  </body>
+</html>
