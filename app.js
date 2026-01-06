@@ -325,12 +325,14 @@ const gameState = { gold: 0 };
 window.gameState = gameState;
 
 function persistProgress() {
+  const snapshot = {
+    progress: window.progress,
+    gold: gameState.gold,
+    updatedAt: Date.now(),
+  };
   localStorage.setItem(
     'goVizProgress',
-    JSON.stringify({
-      progress: window.progress,
-      gold: gameState.gold,
-    })
+    JSON.stringify(snapshot)
   );
 }
 window.persistProgress = persistProgress;

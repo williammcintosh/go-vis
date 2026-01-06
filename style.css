@@ -2139,40 +2139,6 @@ body.badges-visible:not(.badges-hidden) .site-header__content--badges .badge {
   background: var(--text-ink);
 }
 
-.cloud-debug {
-  display: none;
-  margin: 12px auto;
-  padding: 12px;
-  max-width: 980px;
-  border: 1px dashed #a0aec0;
-  background: #f7f9fc;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  color: var(--text-ink);
-}
-
-.cloud-debug__status {
-  margin: 0;
-}
-
-.cloud-debug__actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 8px 0;
-}
-
-.cloud-debug__output {
-  margin: 0;
-  padding: 10px;
-  background: #0f172a;
-  color: #e2e8f0;
-  border-radius: 6px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  min-height: 48px;
-}
-
 @media (max-width: 640px) {
   .site-header__content--badges {
     gap: clamp(0.2rem, 0.8vw, 0.6rem);

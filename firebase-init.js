@@ -79,13 +79,85 @@ function requireUser() {
   return user;
 }
 
+function toMillis(value) {
+  if (!value) return null;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (value.seconds) {
+    return value.seconds * 1000 + Math.round((value.nanoseconds || 0) / 1e6);
+  }
+  return null;
+}
+
+function readLocalSnapshot() {
+  try {
+    const raw = localStorage.getItem('goVizProgress');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      return {
+        progress: parsed.progress || {},
+        gold: Number(parsed.gold),
+        updatedAt: parsed.updatedAt || null,
+      };
+    }
+  } catch (err) {
+    console.warn('[CLOUD] Failed to read local snapshot', err);
+  }
+  return null;
+}
+
+function applyLocalSnapshot(snapshot) {
+  if (!snapshot) return;
+  const goldValue = Number(snapshot.gold);
+  const payload = {
+    progress: snapshot.progress || {},
+    gold: Number.isFinite(goldValue) ? goldValue : 0,
+    updatedAt: snapshot.updatedAt || Date.now(),
+  };
+
+  try {
+    localStorage.setItem('goVizProgress', JSON.stringify(payload));
+  } catch (err) {
+    console.warn('[CLOUD] Failed to write local snapshot', err);
+  }
+
+  if (typeof window.normalizeProgress === 'function') {
+    window.progress = window.normalizeProgress(payload.progress);
+  } else if (payload.progress && typeof payload.progress === 'object') {
+    window.progress = payload.progress;
+  }
+
+  if (window.gameState && Number.isFinite(goldValue)) {
+    window.gameState.gold = goldValue;
+    const goldEl = document.getElementById('goldValue');
+    if (goldEl) goldEl.textContent = goldValue;
+  }
+
+  window.refreshHomeButtons?.();
+}
+
+function buildCloudPayload(snapshot) {
+  const base =
+    snapshot && typeof snapshot === 'object'
+      ? snapshot
+      : { progress: snapshot || {} };
+  const goldValue =
+    Number.isFinite(base.gold) && base.gold >= 0
+      ? base.gold
+      : Number(window?.gameState?.gold);
+  const payload = {
+    progress: base.progress || {},
+    updatedAt: serverTimestamp(),
+  };
+  if (Number.isFinite(goldValue)) payload.gold = goldValue;
+  return payload;
+}
+
 window.goVisDB = {
   saveProgress: async (progressObj) => {
     const user = requireUser();
-    const payload = {
-      progress: progressObj || {},
-      updatedAt: serverTimestamp(),
-    };
+    const payload = buildCloudPayload(progressObj);
     console.log('[CLOUD] Saving progress for', user.uid, payload);
     await setDoc(getUserDocRef(user.uid), payload, { merge: true });
   },
@@ -94,7 +166,11 @@ window.goVisDB = {
     const snap = await getDoc(getUserDocRef(user.uid));
     if (!snap.exists()) return null;
     const data = snap.data();
-    return data?.progress ?? null;
+    return {
+      progress: data?.progress || {},
+      gold: Number(data?.gold),
+      updatedAt: data?.updatedAt || null,
+    };
   },
   recordRound: async (skillRating) => {
     const user = requireUser();
@@ -230,79 +306,81 @@ function getLocalProgress() {
 }
 window.getLocalProgress = getLocalProgress;
 
-function initCloudDebugUI() {
-  const container = document.getElementById('cloudDebug');
-  if (!container) return;
+const CLOUD_SAVE_DEBOUNCE_MS = 800;
+let cloudSaveTimer = null;
 
-  const userStatusEl = document.getElementById('cloudUserStatus');
-  const saveStatusEl = document.getElementById('cloudSaveStatus');
-  const outputEl = document.getElementById('cloudLoadOutput');
-  const saveBtn = document.getElementById('cloudSaveBtn');
-  const loadBtn = document.getElementById('cloudLoadBtn');
-  const clearBtn = document.getElementById('cloudClearBtn');
+async function saveSnapshotToCloud(snapshot) {
+  if (!auth.currentUser || !window.goVisDB?.saveProgress) return;
+  const payload = snapshot || readLocalSnapshot();
+  if (!payload) return;
+  try {
+    await window.goVisDB.saveProgress(payload);
+    console.log('[CLOUD] Auto-saved progress to cloud');
+  } catch (err) {
+    console.error('[CLOUD] Auto-save failed', err);
+  }
+}
 
-  const setVisibility = (user) => {
-    const isLoggedIn = Boolean(user);
-    container.style.display = isLoggedIn ? 'block' : 'none';
-    if (userStatusEl) {
-      userStatusEl.textContent = isLoggedIn
-        ? `Logged in as ${user.email || user.uid}`
-        : 'Log in to use cloud save debug';
-    }
-    if (!isLoggedIn && outputEl) {
-      outputEl.textContent = '';
-    }
+function queueCloudSave(snapshot) {
+  if (!auth.currentUser) return;
+  if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(() => {
+    cloudSaveTimer = null;
+    saveSnapshotToCloud(snapshot);
+  }, CLOUD_SAVE_DEBOUNCE_MS);
+}
+
+async function syncCloudAndLocal(user) {
+  if (!user) return;
+  let cloud = null;
+  try {
+    cloud = await window.goVisDB.loadProgress();
+  } catch (err) {
+    console.error('[CLOUD] Failed to load cloud progress', err);
+  }
+  const local = readLocalSnapshot();
+  const localUpdated = Number(local?.updatedAt) || null;
+  const cloudUpdated = toMillis(cloud?.updatedAt);
+
+  const shouldAdoptCloud =
+    cloud && (!localUpdated || (cloudUpdated && cloudUpdated >= localUpdated));
+
+  if (shouldAdoptCloud) {
+    applyLocalSnapshot({
+      progress: cloud.progress || {},
+      gold: Number.isFinite(cloud.gold) ? cloud.gold : local?.gold,
+      updatedAt: cloudUpdated || Date.now(),
+    });
+  } else if (local && (!cloud || (localUpdated && (!cloudUpdated || localUpdated > cloudUpdated)))) {
+    queueCloudSave(local);
+  }
+}
+
+function attachCloudSaveHook(attempt = 0) {
+  if (attachCloudSaveHook.attached) return;
+  if (typeof window.persistProgress !== 'function') {
+    if (attempt > 20) return;
+    setTimeout(() => attachCloudSaveHook(attempt + 1), 200);
+    return;
+  }
+
+  attachCloudSaveHook.attached = true;
+  const originalPersist = window.persistProgress;
+  window.persistProgress = (...args) => {
+    const result = originalPersist.apply(window, args);
+    queueCloudSave();
+    return result;
   };
+}
 
-  onAuthStateChanged(auth, (user) => {
+function initCloudSync() {
+  onAuthStateChanged(auth, async (user) => {
     console.log('[CLOUD] Auth state changed', user?.uid);
-    setVisibility(user);
-  });
-
-  saveBtn?.addEventListener('click', async () => {
-    try {
-      const localProgress = getLocalProgress();
-      console.log('[CLOUD] Save button clicked with local progress', localProgress);
-      await window.goVisDB.saveProgress(localProgress);
-      const ts = new Date().toISOString();
-      if (saveStatusEl) {
-        saveStatusEl.textContent = `Last cloud save: ${ts}`;
-      }
-      console.log('[CLOUD] Saved at', ts);
-    } catch (err) {
-      console.error('[CLOUD] Save failed', err);
-    }
-  });
-
-  loadBtn?.addEventListener('click', async () => {
-    try {
-      const cloudProgress = await window.goVisDB.loadProgress();
-      console.log('[CLOUD] Loaded progress from cloud', cloudProgress);
-      if (outputEl) {
-        outputEl.textContent = cloudProgress
-          ? JSON.stringify(cloudProgress, null, 2)
-          : 'null';
-      }
-    } catch (err) {
-      console.error('[CLOUD] Load failed', err);
-    }
-  });
-
-  clearBtn?.addEventListener('click', async () => {
-    try {
-      console.log('[CLOUD] Clearing progress in cloud');
-      await window.goVisDB.saveProgress({});
-      if (outputEl) {
-        outputEl.textContent = '{}';
-      }
-    } catch (err) {
-      console.error('[CLOUD] Clear failed', err);
-    }
+    if (!user) return;
+    attachCloudSaveHook();
+    await syncCloudAndLocal(user);
   });
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initCloudDebugUI);
-} else {
-  initCloudDebugUI();
-}
+initCloudSync();
+attachCloudSaveHook();
