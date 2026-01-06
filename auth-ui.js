@@ -93,6 +93,32 @@ function renderAccountArea(user) {
       authApi?.login();
     });
     menu.appendChild(loginMenuItem);
+
+    const profileBtn = document.createElement('button');
+    profileBtn.type = 'button';
+    profileBtn.className = 'account-menu__item';
+    profileBtn.textContent = 'Profile';
+    profileBtn.addEventListener('click', () => {
+      closeMenu();
+      window.location.href = 'profile.html';
+    });
+    menu.appendChild(profileBtn);
+
+    const restartBtn = document.createElement('button');
+    restartBtn.type = 'button';
+    restartBtn.className = 'account-menu__item';
+    restartBtn.textContent = 'Restart';
+    restartBtn.addEventListener('click', () => {
+      closeMenu();
+      const modal = document.getElementById('confirmModal');
+      if (modal) {
+        modal.classList.add('active');
+      } else {
+        console.warn('Confirm modal not found for restart');
+      }
+    });
+    menu.appendChild(restartBtn);
+
     if (badgeAvatarBtn) {
       badgeAvatarBtn.onclick = (event) => toggleMenu(event, badgeAvatarBtn);
     }

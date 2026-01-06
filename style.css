@@ -689,14 +689,22 @@ button.bonus-button.disabled .bonus-cost {
 }
 
 .first-move-hint__text {
+  position: absolute;
   display: none;
-  margin: 0.35rem auto 0.75rem;
-  max-width: min(92vw, 360px);
-  text-align: center;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translate(-50%, 0);
+  width: 100%;
+  max-width: 100%;
+  padding: 4px 10px;
+  text-align: right;
+  white-space: nowrap;
   font-size: 0.95rem;
   line-height: 1.35;
   color: var(--text-muted);
   opacity: 0;
+  z-index: 4;
+  pointer-events: none;
   transition: opacity 200ms ease;
 }
 
