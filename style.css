@@ -279,8 +279,6 @@ body[data-page='difficulty'] .site-header__content--badges {
 
 .account-menu {
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
   background: var(--card-bg);
   border-radius: 14px;
   border: 1px solid var(--border-subtle);
@@ -295,6 +293,10 @@ body[data-page='difficulty'] .site-header__content--badges {
 
 .account-menu.open {
   display: flex;
+}
+
+.account-menu--floating {
+  position: fixed;
 }
 
 .account-menu__item {

@@ -3,6 +3,10 @@ let authApi = null;
 let openMenu = null;
 let currentTrigger = null;
 let detachOutside = null;
+const sharedMenu = document.createElement('div');
+sharedMenu.id = 'accountMenu';
+sharedMenu.className = 'account-menu account-menu--floating';
+document.body.appendChild(sharedMenu);
 
 function closeMenu() {
   if (openMenu) {
@@ -27,9 +31,11 @@ function renderAccountArea(user) {
   accountArea.innerHTML = '';
   accountArea.classList.toggle('logged-in', Boolean(user));
 
-  const menu = document.createElement('div');
-  menu.className = 'account-menu';
-
+  const menu = sharedMenu;
+  menu.innerHTML = '';
+  menu.style.top = '';
+  menu.style.left = '';
+  menu.style.right = '';
   const setBadgeAvatar = (src, alt) => {
     if (badgeAvatarImg) {
       badgeAvatarImg.src = src;
@@ -43,11 +49,22 @@ function renderAccountArea(user) {
     closeMenu();
   };
 
+  const positionMenu = (triggerEl) => {
+    const rect = triggerEl?.getBoundingClientRect();
+    if (!rect) return;
+    const top = rect.bottom + 8 + window.scrollY;
+    const right = Math.max(8, window.innerWidth - rect.right);
+    menu.style.top = `${top}px`;
+    menu.style.right = `${right}px`;
+    menu.style.left = 'auto';
+  };
+
   const toggleMenu = (event, triggerEl) => {
     event.stopPropagation();
     const isOpen = menu.classList.contains('open');
     closeMenu();
     if (!isOpen) {
+      positionMenu(triggerEl);
       menu.classList.add('open');
       if (triggerEl) triggerEl.setAttribute('aria-expanded', 'true');
       openMenu = menu;
@@ -76,8 +93,6 @@ function renderAccountArea(user) {
       authApi?.login();
     });
     menu.appendChild(loginMenuItem);
-
-    accountArea.appendChild(menu);
     if (badgeAvatarBtn) {
       badgeAvatarBtn.onclick = (event) => toggleMenu(event, badgeAvatarBtn);
     }
@@ -157,7 +172,6 @@ function renderAccountArea(user) {
   menu.appendChild(restartBtn);
   chip.addEventListener('click', (event) => toggleMenu(event, chip));
   accountArea.appendChild(chip);
-  accountArea.appendChild(menu);
 
   if (badgeAvatarBtn) {
     badgeAvatarBtn.onclick = (event) => toggleMenu(event, badgeAvatarBtn);
