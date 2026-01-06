@@ -161,6 +161,19 @@ window.goVisDB = {
     console.log('[CLOUD] Saving progress for', user.uid, payload);
     await setDoc(getUserDocRef(user.uid), payload, { merge: true });
   },
+  resetProfile: async () => {
+    const user = requireUser();
+    const docRef = getUserDocRef(user.uid);
+    const payload = {
+      progress: {},
+      gold: 0,
+      skill: 0,
+      stats: { totals: {}, streaks: {} },
+      updatedAt: serverTimestamp(),
+    };
+    console.log('[CLOUD] Resetting profile for', user.uid);
+    await setDoc(docRef, payload, { merge: false });
+  },
   loadProgress: async () => {
     const user = requireUser();
     const snap = await getDoc(getUserDocRef(user.uid));

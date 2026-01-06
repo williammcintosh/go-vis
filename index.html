@@ -133,10 +133,16 @@
     <!-- Restart Confirmation Modal -->
     <div id="confirmModal" class="modal">
       <div class="modal-content">
-        <p>This will erase your current progress. Are you sure?</p>
+        <p style="margin-bottom: 10px">
+          This will erase all progress on this device and in the cloud for your account.
+        </p>
+        <p style="margin-top: 0; font-size: 0.95rem; opacity: 0.85">
+          If you just want to switch accounts, log out instead.
+        </p>
         <div class="modal-buttons">
           <button id="confirmNo">Cancel</button>
           <button id="confirmYes">Yes, restart</button>
+          <button id="confirmLogout">Log out instead</button>
         </div>
       </div>
     </div>

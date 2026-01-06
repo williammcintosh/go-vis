@@ -554,8 +554,15 @@ startBtn?.addEventListener('click', () => {
   nextPuzzleSuggestion = null;
 });
 
-confirmYes.addEventListener('click', () => {
+confirmYes.addEventListener('click', async () => {
   confirmModal.classList.remove('active');
+  if (window.goVisDB?.resetProfile) {
+    try {
+      await window.goVisDB.resetProfile();
+    } catch (err) {
+      console.warn('[RESET] Cloud reset skipped or failed', err);
+    }
+  }
   const resetResult = resetGameStateUI(resetStateParams);
   difficultyState = resetResult.difficultyState;
   playerProgress = resetResult.playerProgress;
@@ -566,6 +573,12 @@ confirmYes.addEventListener('click', () => {
 
 confirmNo.addEventListener('click', () => {
   confirmModal.classList.remove('active');
+});
+
+const confirmLogout = document.getElementById('confirmLogout');
+confirmLogout?.addEventListener('click', () => {
+  confirmModal.classList.remove('active');
+  window.goVisAuth?.logout?.();
 });
 
 // ---------- Utility ----------
