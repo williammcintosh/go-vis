@@ -16,6 +16,7 @@ import {
   runTransaction,
   increment,
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { mergeProfiles } from './profileMerge.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyC37VzJ-rhwu8OgadesHqoxXimgmcM_zZ8',
@@ -352,21 +353,10 @@ async function syncCloudAndLocal(user) {
     console.error('[CLOUD] Failed to load cloud progress', err);
   }
   const local = readLocalSnapshot();
-  const localUpdated = Number(local?.updatedAt) || null;
-  const cloudUpdated = toMillis(cloud?.updatedAt);
-
-  const shouldAdoptCloud =
-    cloud && (!localUpdated || (cloudUpdated && cloudUpdated >= localUpdated));
-
-  if (shouldAdoptCloud) {
-    applyLocalSnapshot({
-      progress: cloud.progress || {},
-      gold: Number.isFinite(cloud.gold) ? cloud.gold : local?.gold,
-      updatedAt: cloudUpdated || Date.now(),
-    });
-  } else if (local && (!cloud || (localUpdated && (!cloudUpdated || localUpdated > cloudUpdated)))) {
-    queueCloudSave(local);
-  }
+  const { mergedProfile, decisions } = mergeProfiles(local || {}, cloud || {});
+  console.log('[CLOUD] merge decisions', decisions);
+  applyLocalSnapshot(mergedProfile);
+  queueCloudSave(mergedProfile);
 }
 
 function attachCloudSaveHook(attempt = 0) {
