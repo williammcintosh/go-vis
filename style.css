@@ -628,12 +628,28 @@ button.bonus-button.disabled .bonus-cost {
 }
 
 /* ========= Go Board ========= */
+.board-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  max-width: calc(var(--content-width) + 52px);
+  background: #fff;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  border-radius: 26px;
+  padding: 18px;
+  margin: clamp(2.6rem, 9vh, 4rem) auto 0;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
 #board {
   position: relative;
   width: var(--content-width);
   max-width: var(--content-width);
   aspect-ratio: 1 / 1;
-  margin: clamp(2.6rem, 9vh, 4rem) auto 0;
+  margin: 0;
   background: var(--background);
 }
 
@@ -927,10 +943,16 @@ button.bonus-button.disabled .bonus-cost {
 }
 
 @media (max-width: 480px) {
+  .board-shell {
+    margin: 25px auto;
+    padding: 14px;
+    border-radius: 22px;
+  }
+
   #board {
     width: 60vw;
     max-width: 60vw;
-    margin: 25px auto;
+    margin: 0;
   }
 
   #feedback {
