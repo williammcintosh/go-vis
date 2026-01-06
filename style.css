@@ -121,6 +121,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.allow-scroll {
+  overflow-y: auto !important;
+  touch-action: auto !important;
+}
+
 body.header-hidden {
   padding-top: 0;
 }
@@ -288,7 +293,7 @@ body[data-page='difficulty'] .site-header__content--badges {
   display: none;
   flex-direction: column;
   gap: 0.35rem;
-  z-index: 30;
+  z-index: 10050;
 }
 
 .account-menu.open {

@@ -163,6 +163,10 @@ async function renderProfile(user) {
 }
 
 function init() {
+  document.documentElement.classList.remove('no-scroll');
+  document.body.classList.remove('no-scroll');
+  document.body.classList.add('allow-scroll');
+
   els.backBtn?.addEventListener('click', () => {
     window.location.href = 'index.html';
   });

@@ -8,6 +8,8 @@
   min-height: 100vh;
   padding: 16px;
   box-sizing: border-box;
+  overflow-y: auto;
+  touch-action: auto;
 }
 
 .profile-header {
