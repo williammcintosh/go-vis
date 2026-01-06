@@ -180,39 +180,10 @@
   margin: 0;
 }
 
-.progress-bar {
-  display: flex;
-  gap: 6px;
-}
-
-.progress-segment {
-  flex: 1;
-  min-width: 36px;
-  border-radius: 10px;
-  border: 1px dashed rgba(0, 0, 0, 0.08);
-  background: rgba(0, 0, 0, 0.03);
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  transition: transform 120ms ease, box-shadow 120ms ease;
-}
-
-.progress-segment.is-filled {
-  background: linear-gradient(135deg, rgba(0, 153, 255, 0.14), rgba(0, 255, 153, 0.12));
-  border-color: rgba(0, 153, 255, 0.4);
-  box-shadow: 0 6px 16px rgba(0, 153, 255, 0.2);
-}
-
-.progress-segment__label {
-  font-size: 0.8rem;
-  opacity: 0.75;
-}
-
-.progress-segment__value {
-  font-size: 1.1rem;
+.progress-card__value {
+  font-size: 1.2rem;
   font-weight: 800;
+  color: var(--text-strong);
 }
 
 .profile-card--collapsible {

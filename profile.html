@@ -38,12 +38,6 @@
             <div class="metric-label">Gold</div>
             <div id="profileGold" class="metric-value">--</div>
           </div>
-          <div class="metric">
-            <div class="metric-label">Time played</div>
-            <div id="profileTime" class="metric-value metric-value--muted">
-              Coming soon
-            </div>
-          </div>
         </div>
       </div>
 
@@ -76,11 +70,10 @@
       </section>
 
       <div class="profile-card profile-card--collapsible" id="totalsCard">
-        <button id="totalsToggle" class="profile-card__header profile-card__header--button">
+        <div class="profile-card__header">
           <h2>Totals</h2>
-          <span id="totalsChevron">▼</span>
-        </button>
-        <div id="totalsBody" class="profile-totals" hidden>
+        </div>
+        <div id="totalsBody" class="profile-totals">
           <div class="total-row">
             <span>Attempts</span><strong id="totalAttempts">0</strong>
           </div>

@@ -6,16 +6,13 @@ const els = {
   profileAvatar: document.getElementById('profileAvatar'),
   profileSkill: document.getElementById('profileSkill'),
   profileGold: document.getElementById('profileGold'),
-  profileTime: document.getElementById('profileTime'),
   streakWin: document.getElementById('streakWin'),
   streakFirstTry: document.getElementById('streakFirstTry'),
   streakSpeed: document.getElementById('streakSpeed'),
   lastResult: document.getElementById('lastResult'),
   progressCards: document.getElementById('progressCards'),
   progressSection: document.getElementById('progressSection'),
-  totalsToggle: document.getElementById('totalsToggle'),
   totalsBody: document.getElementById('totalsBody'),
-  totalsChevron: document.getElementById('totalsChevron'),
   totals: {
     attempts: document.getElementById('totalAttempts'),
     completed: document.getElementById('totalCompleted'),
@@ -88,32 +85,22 @@ function setTotals(totals) {
   });
 }
 
-function createProgressSegment(stoneCount, value) {
-  const segment = document.createElement('div');
-  segment.className = 'progress-segment';
-  if (Number(value) > 0) segment.classList.add('is-filled');
-  const label = document.createElement('div');
-  label.className = 'progress-segment__label';
-  label.textContent = `${stoneCount} stones`;
-  const val = document.createElement('div');
-  val.className = 'progress-segment__value';
-  val.textContent = Number(value) || 0;
-  segment.appendChild(label);
-  segment.appendChild(val);
-  return segment;
+function getBoardMaxStone(perStones) {
+  const entries = Object.entries(perStones || {});
+  if (!entries.length) return null;
+  const numericKeys = entries
+    .map(([stone]) => Number(stone))
+    .filter((n) => Number.isFinite(n));
+  if (!numericKeys.length) return null;
+  return Math.max(...numericKeys);
 }
 
 function renderProgress(progress) {
   if (!els.progressCards) return;
   els.progressCards.innerHTML = '';
   const boards = progress?.position || {};
-  const entries = Object.entries(boards);
-  if (!entries.length) {
-    els.progressSection.style.display = 'none';
-    return;
-  }
-  els.progressSection.style.display = '';
-  entries.forEach(([boardKey, perStones]) => {
+  const targets = ['5x5', '6x6', '7x7'];
+  targets.forEach((boardKey) => {
     const card = document.createElement('div');
     card.className = 'progress-card';
     const header = document.createElement('div');
@@ -124,17 +111,20 @@ function renderProgress(progress) {
     header.appendChild(title);
     card.appendChild(header);
 
-    const bar = document.createElement('div');
-    bar.className = 'progress-bar';
-    const stoneEntries = Object.entries(perStones || {}).sort(
-      ([aKey], [bKey]) => Number(aKey) - Number(bKey)
-    );
-    stoneEntries.forEach(([stone, value]) => {
-      bar.appendChild(createProgressSegment(stone, value));
-    });
-    card.appendChild(bar);
+    const valueEl = document.createElement('div');
+    valueEl.className = 'progress-card__value';
+    const maxStone = getBoardMaxStone(boards[boardKey]);
+    if (maxStone) {
+      valueEl.textContent = `${maxStone} stones`;
+    } else {
+      valueEl.textContent = 'Locked';
+      valueEl.style.opacity = '0.6';
+    }
+
+    card.appendChild(valueEl);
     els.progressCards.appendChild(card);
   });
+  els.progressSection.style.display = '';
 }
 
 async function loadProfile(user) {
@@ -165,28 +155,16 @@ async function renderProfile(user) {
   }
   hideLoggedOut();
   const data = await loadProfile(user);
+  const progress = data?.progress || (window.getLocalProgress?.() || {});
   setIdentity(user, data);
   setStreaks(data?.stats?.streaks || {});
   setTotals(data?.stats?.totals || {});
-  renderProgress(data?.progress || {});
+  renderProgress(progress);
 }
 
 function init() {
   els.backBtn?.addEventListener('click', () => {
     window.location.href = 'index.html';
-  });
-
-  els.totalsToggle?.addEventListener('click', () => {
-    const isHidden = els.totalsBody?.hasAttribute('hidden');
-    if (els.totalsBody) {
-      if (isHidden) {
-        els.totalsBody.removeAttribute('hidden');
-        els.totalsChevron.textContent = '▲';
-      } else {
-        els.totalsBody.setAttribute('hidden', 'true');
-        els.totalsChevron.textContent = '▼';
-      }
-    }
   });
 
   els.loginBtn?.addEventListener('click', () => {
