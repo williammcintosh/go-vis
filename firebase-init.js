@@ -3,6 +3,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
   onAuthStateChanged,
   signOut,
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -28,12 +29,29 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
 const db = getFirestore(app);
 const getUserDocRef = (uid) => doc(db, 'users', uid);
 
+function buildProvider(forceChooser = false) {
+  const provider = new GoogleAuthProvider();
+  // Force Google to show the account chooser each time so users can switch accounts explicitly.
+  provider.setCustomParameters({
+    prompt: 'select_account',
+  });
+  return provider;
+}
+
 window.goVisAuth = {
-  login: () => signInWithPopup(auth, provider),
+  login: async ({ forceChooser = false } = {}) => {
+    const provider = buildProvider(forceChooser);
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      // Fallback for popup blockers / COOP issues.
+      console.warn('[CLOUD][AUTH] Popup sign-in failed, using redirect', err);
+      await signInWithRedirect(auth, provider);
+    }
+  },
   logout: () => signOut(auth),
   onChange: (cb) => onAuthStateChanged(auth, cb),
 };

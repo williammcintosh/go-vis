@@ -125,12 +125,7 @@ function renderAccountArea(user) {
   switchBtn.addEventListener('click', async () => {
     closeMenu();
     try {
-      await authApi?.logout();
-    } catch (err) {
-      console.error('Logout before switch failed', err);
-    }
-    try {
-      await authApi?.login();
+      await authApi?.login({ forceChooser: true });
     } catch (err) {
       console.error('Login failed', err);
     }
