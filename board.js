@@ -69,10 +69,23 @@ async function playSequence(
   getIntersectionRef,
   updateSequenceIntersectionsRef
 ) {
+  const debugSequence = window.DEBUG_SEQUENCE === true;
+  const formatMove = (move) => {
+    if (!move) return '??';
+    const color = move.color === 'B' ? 'B' : 'W';
+    return `${color}[${move.x},${move.y}]`;
+  };
+  if (debugSequence) {
+    console.log('[sequence-debug] expected order', {
+      total: moves.length,
+      moves: moves.map(formatMove),
+    });
+  }
   const sequenceBoard = window.GoMiniBoardLogic.createBoardMatrix(boardDimension);
   let prevMap = {};
   const stepDelay = 420;
-  for (const move of moves) {
+  for (let i = 0; i < moves.length; i++) {
+    const move = moves[i];
     sequenceBoard[move.y][move.x] = move.color;
     window.GoMiniBoardLogic.checkCaptures(
       sequenceBoard,
@@ -81,6 +94,16 @@ async function playSequence(
       move.color
     );
     const nextMap = window.GoMiniBoardLogic.buildStoneMap(sequenceBoard);
+    if (debugSequence) {
+      const prevCount = Object.keys(prevMap).length;
+      const nextCount = Object.keys(nextMap).length;
+      console.log('[sequence-debug] step', {
+        index: i + 1,
+        move: formatMove(move),
+        prevCount,
+        nextCount,
+      });
+    }
     updateSequenceIntersectionsRef(prevMap, nextMap);
     prevMap = nextMap;
     await new Promise((resolve) => setTimeout(resolve, stepDelay));

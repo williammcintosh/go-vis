@@ -48,64 +48,20 @@ function checkAnswers({
   let missedCount = 0;
   const orderMistakes = new Set();
   let filledPositions = 0;
-  for (let y = 0; y <= config.size; y++) {
-    for (let x = 0; x <= config.size; x++) {
-      const inter = document.querySelector(
-        `.intersection[data-x="${x}"][data-y="${y}"]`
-      );
-      const expected = stones.find((s) => s.x === x && s.y === y);
-      const playerWhite = inter.classList.contains('white');
-      const playerBlack = inter.classList.contains('black');
-      const shouldCheck = expected || playerWhite || playerBlack;
-      if (!shouldCheck) continue;
-
-      let correct = false;
-      if (expected) {
-        correct =
-          (expected.color === 'white' && playerWhite) ||
-          (expected.color === 'black' && playerBlack);
-        if (playerWhite || playerBlack) {
-          filledPositions++;
-        }
-      } else if (!playerWhite && !playerBlack) correct = true;
-
-      const marker = document.createElement('div');
-      marker.classList.add('marker');
-      marker.textContent = correct ? '✅' : '❌';
-      const coordKey = `${x},${y}`;
-      const isOrderMistake = window.activeGame?.orderMistakes?.has(coordKey);
-      if (!correct || isOrderMistake) {
-        allCorrect = false;
-        missedCount++;
-        if (isOrderMistake) missedCount--; // already counted elsewhere
-      }
-      if (isOrderMistake) {
-        marker.textContent = '❌';
-        marker.classList.add('marker--order');
-      }
-      inter.appendChild(marker);
-    }
+  const debugSequence =
+    window.DEBUG_SEQUENCE === true && currentMode === 'sequence';
+  const mismatches = [];
+  if (debugSequence) {
+    const preOrderMistakes = window.activeGame?.orderMistakes;
+    console.log('[sequence-debug] pre-check', {
+      preOrderMistakes: preOrderMistakes ? Array.from(preOrderMistakes) : null,
+    });
   }
-
-  const expectedBlackCount = stones.filter((s) => s.color === 'black').length;
-  const expectedWhiteCount = stones.filter((s) => s.color === 'white').length;
-  let playerBlackCount = 0;
-  let playerWhiteCount = 0;
-  document.querySelectorAll('.intersection.black').forEach(() => {
-    playerBlackCount++;
-  });
-  document.querySelectorAll('.intersection.white').forEach(() => {
-    playerWhiteCount++;
-  });
-  const positionsReward = filledPositions === stones.length && stones.length > 0;
-  const colorsReward =
-    playerBlackCount === expectedBlackCount &&
-    playerWhiteCount === expectedWhiteCount &&
-    expectedBlackCount + expectedWhiteCount > 0;
-
+  let expectedMoves = [];
+  let history = [];
   if (currentMode === 'sequence') {
-    const history = window.activeGame?.sequenceHistory ?? [];
-    const expectedMoves = window.activeGame?.gameSnapshot?.moves ?? [];
+    history = window.activeGame?.sequenceHistory ?? [];
+    expectedMoves = window.activeGame?.gameSnapshot?.moves ?? [];
     const expectedCount = expectedMoves.length;
     const alignCount = Math.min(history.length, expectedCount);
     for (let i = 0; i < alignCount; i++) {
@@ -139,21 +95,145 @@ function checkAnswers({
     if (sequenceOrderIssues > 0) {
       allCorrect = false;
     }
-    const formatExpected = (move) => {
-      if (!move) return '??';
-      const color = move.color === 'black' || move.color === 'B' ? 'B' : 'W';
-      return `${color}[${move.x},${move.y}]`;
-    };
-    const formatActual = (move) => {
-      if (!move) return '??';
-      const color =
-        move.color === 'black'
-          ? 'B'
-          : move.color === 'white'
-          ? 'W'
-          : move.color;
-      return `${color}[${move.x},${move.y}]`;
-    };
+    if (debugSequence) {
+      const formatExpected = (move) => {
+        if (!move) return '??';
+        const color = move.color === 'black' || move.color === 'B' ? 'B' : 'W';
+        return `${color}[${move.x},${move.y}]`;
+      };
+      const formatActual = (move) => {
+        if (!move) return '??';
+        const color =
+          move.color === 'black'
+            ? 'B'
+            : move.color === 'white'
+            ? 'W'
+            : move.color;
+        return `${color}[${move.x},${move.y}]`;
+      };
+      const expectedList = expectedMoves.map(formatExpected);
+      const actualList = history.map(formatActual);
+      let firstMismatch = null;
+      for (let i = 0; i < Math.min(expectedList.length, actualList.length); i++) {
+        if (expectedList[i] !== actualList[i]) {
+          firstMismatch = {
+            index: i + 1,
+            expected: expectedList[i],
+            actual: actualList[i],
+          };
+          break;
+        }
+      }
+      if (!firstMismatch && expectedList.length !== actualList.length) {
+        firstMismatch = {
+          index: Math.min(expectedList.length, actualList.length) + 1,
+          expected: expectedList[actualList.length] ?? 'end',
+          actual: actualList[expectedList.length] ?? 'end',
+        };
+      }
+      console.log('[sequence-debug] compare', {
+        expected: expectedList,
+        actual: actualList,
+        firstMismatch,
+        orderIssues: sequenceOrderIssues,
+      });
+    }
+  }
+  for (let y = 0; y <= config.size; y++) {
+    for (let x = 0; x <= config.size; x++) {
+      const inter = document.querySelector(
+        `.intersection[data-x="${x}"][data-y="${y}"]`
+      );
+      const expected = stones.find((s) => s.x === x && s.y === y);
+      const playerWhite = inter.classList.contains('white');
+      const playerBlack = inter.classList.contains('black');
+      const shouldCheck = expected || playerWhite || playerBlack;
+      if (!shouldCheck) continue;
+
+      let correct = false;
+      let actualColor = null;
+      if (playerWhite) actualColor = 'white';
+      if (playerBlack) actualColor = 'black';
+      if (expected) {
+        correct =
+          (expected.color === 'white' && playerWhite) ||
+          (expected.color === 'black' && playerBlack);
+        if (playerWhite || playerBlack) {
+          filledPositions++;
+        }
+      } else if (!playerWhite && !playerBlack) correct = true;
+
+      const marker = document.createElement('div');
+      marker.classList.add('marker');
+      marker.textContent = correct ? '✅' : '❌';
+      const coordKey = `${x},${y}`;
+      const isOrderMistake = orderMistakes.has(coordKey);
+      if (!correct || isOrderMistake) {
+        allCorrect = false;
+        missedCount++;
+        if (isOrderMistake) missedCount--; // already counted elsewhere
+      }
+      if (isOrderMistake) {
+        marker.textContent = '❌';
+        marker.classList.add('marker--order');
+      }
+      if (debugSequence && (!correct || isOrderMistake)) {
+        const expectedColor = expected ? expected.color : null;
+        const reason = isOrderMistake
+          ? 'orderMistake'
+          : expected
+          ? actualColor
+            ? 'wrongColor'
+            : 'missingStone'
+          : actualColor
+          ? 'extraStone'
+          : 'empty';
+        mismatches.push({
+          x,
+          y,
+          expected: expectedColor,
+          actual: actualColor,
+          reason,
+        });
+      }
+      inter.appendChild(marker);
+    }
+  }
+
+  const expectedBlackCount = stones.filter((s) => s.color === 'black').length;
+  const expectedWhiteCount = stones.filter((s) => s.color === 'white').length;
+  let playerBlackCount = 0;
+  let playerWhiteCount = 0;
+  document.querySelectorAll('.intersection.black').forEach(() => {
+    playerBlackCount++;
+  });
+  document.querySelectorAll('.intersection.white').forEach(() => {
+    playerWhiteCount++;
+  });
+  const positionsReward = filledPositions === stones.length && stones.length > 0;
+  const colorsReward =
+    playerBlackCount === expectedBlackCount &&
+    playerWhiteCount === expectedWhiteCount &&
+    expectedBlackCount + expectedWhiteCount > 0;
+
+  if (debugSequence) {
+    console.log('[sequence-debug] board-eval', {
+      missedCount,
+      filledPositions,
+      expectedTotal: stones.length,
+      playerBlackCount,
+      playerWhiteCount,
+      expectedBlackCount,
+      expectedWhiteCount,
+      mismatches,
+    });
+    if (sequenceOrderIssues === 0 && missedCount > 0) {
+      console.log('[sequence-debug] note', {
+        message: 'Order matched but board state mismatched; check mismatches list.',
+      });
+    }
+  }
+  if (currentMode === 'sequence') {
     window.activeGame.orderMistakes = orderMistakes;
   } else {
     window.activeGame.orderMistakes = new Set();

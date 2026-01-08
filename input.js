@@ -57,6 +57,7 @@ function toggleStone(e) {
   const hadBlack = p.classList.contains('black');
   const currentTapMode = window.activeGame?.tapMode ?? getTapMode();
   const hadStone = hadWhite || hadBlack;
+  const debugSequence = window.DEBUG_SEQUENCE === true;
 
   if (currentTapMode === deps.TAP_MODES.TOGGLE) {
     const now = Date.now();
@@ -109,11 +110,34 @@ function toggleStone(e) {
     if (existing) {
       if (newColor) {
         existing.color = newColor;
+        if (debugSequence) {
+          console.log('[sequence-debug] player update', {
+            x: xCoord,
+            y: yCoord,
+            color: newColor,
+            order: window.activeGame.sequenceHistory.map((m) => ({
+              x: m.x,
+              y: m.y,
+              color: m.color,
+            })),
+          });
+        }
       } else {
         window.activeGame.sequenceHistory =
           window.activeGame.sequenceHistory.filter(
             (entry) => entry !== existing
           );
+        if (debugSequence) {
+          console.log('[sequence-debug] player remove', {
+            x: xCoord,
+            y: yCoord,
+            order: window.activeGame.sequenceHistory.map((m) => ({
+              x: m.x,
+              y: m.y,
+              color: m.color,
+            })),
+          });
+        }
       }
     } else if (newColor) {
       window.activeGame.sequenceHistory.push({
@@ -121,6 +145,18 @@ function toggleStone(e) {
         y: yCoord,
         color: newColor,
       });
+      if (debugSequence) {
+        console.log('[sequence-debug] player add', {
+          x: xCoord,
+          y: yCoord,
+          color: newColor,
+          order: window.activeGame.sequenceHistory.map((m) => ({
+            x: m.x,
+            y: m.y,
+            color: m.color,
+          })),
+        });
+      }
     }
   }
 
