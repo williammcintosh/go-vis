@@ -9,12 +9,17 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
   getFirestore,
+  collection,
   doc,
   getDoc,
+  getDocs,
+  query,
+  orderBy,
+  where,
+  limit,
   setDoc,
   serverTimestamp,
   runTransaction,
-  increment,
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { mergeProfiles } from './profileMerge.js';
 
@@ -32,6 +37,13 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const getUserDocRef = (uid) => doc(db, 'users', uid);
+const REGION_OPTIONS = ['NZ', 'AU', 'US', 'EU', 'OTHER'];
+
+function getDefaultRegion() {
+  const lang = (navigator.language || '').toLowerCase();
+  if (lang.startsWith('en-nz')) return 'NZ';
+  return 'OTHER';
+}
 
 function buildProvider(forceChooser = false) {
   const provider = new GoogleAuthProvider();
@@ -71,6 +83,35 @@ window.goVisData = {
       },
       { merge: true }
     );
+  },
+  updateUser: async (uid, payload) => {
+    if (!uid) return;
+    await setDoc(
+      getUserDocRef(uid),
+      {
+        ...payload,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  },
+  loadLeaderboard: async ({ region = null, limitTo = 50 } = {}) => {
+    const base = collection(db, 'users');
+    const constraints = [];
+    if (region) {
+      constraints.push(where('region', '==', region));
+    }
+    constraints.push(orderBy('stats.skill', 'desc'));
+    constraints.push(orderBy('stats.positionRank', 'desc'));
+    constraints.push(orderBy('stats.sequenceRank', 'desc'));
+    constraints.push(orderBy('stats.winStreak', 'desc'));
+    constraints.push(limit(limitTo));
+    // Composite index needed:
+    // Collection: users, Fields: region Asc, stats.skill Desc, stats.positionRank Desc,
+    // stats.sequenceRank Desc, stats.winStreak Desc.
+    const leaderboardQuery = query(base, ...constraints);
+    const snap = await getDocs(leaderboardQuery);
+    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   },
 };
 
@@ -155,6 +196,84 @@ function buildCloudPayload(snapshot) {
   return payload;
 }
 
+function parseBoardSize(boardKey) {
+  if (!boardKey) return null;
+  const size = Number(String(boardKey).split('x')[0]);
+  return Number.isFinite(size) ? size : null;
+}
+
+function getMaxStoneCount(perBoard = {}) {
+  const stones = Object.keys(perBoard)
+    .map((k) => Number(k))
+    .filter((n) => Number.isFinite(n));
+  if (!stones.length) return null;
+  return Math.max(...stones);
+}
+
+function getBestModeProgress(modeProgress = {}) {
+  let bestBoardSize = 0;
+  let bestBoardKey = null;
+  let bestStones = 0;
+  Object.entries(modeProgress).forEach(([boardKey, perBoard]) => {
+    const size = parseBoardSize(boardKey);
+    if (!Number.isFinite(size)) return;
+    const maxStones = getMaxStoneCount(perBoard);
+    if (!Number.isFinite(maxStones)) return;
+    if (size > bestBoardSize) {
+      bestBoardSize = size;
+      bestBoardKey = boardKey;
+      bestStones = maxStones;
+      return;
+    }
+    if (size === bestBoardSize && maxStones > bestStones) {
+      bestBoardKey = boardKey;
+      bestStones = maxStones;
+    }
+  });
+  if (!bestBoardKey) {
+    return { boardKey: null, stones: 0, rank: 0 };
+  }
+  return {
+    boardKey: bestBoardKey,
+    stones: bestStones,
+    rank: bestBoardSize * 100 + bestStones,
+  };
+}
+
+function getLocalPlayerProgress() {
+  try {
+    const raw = localStorage.getItem('goVizPlayerProgress');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
+    }
+  } catch (err) {
+    console.warn('[CLOUD] Failed to read goVizPlayerProgress', err);
+  }
+  return { position: {}, sequence: {} };
+}
+
+function getLocalSkillSnapshot() {
+  const values = [
+    Number(localStorage.getItem('skill_rating')),
+    Number(localStorage.getItem('skill_rating_sequence')),
+  ].filter((n) => Number.isFinite(n));
+  if (!values.length) return null;
+  return Math.max(...values);
+}
+
+function buildDerivedProgressStats() {
+  const progress = getLocalPlayerProgress();
+  const position = getBestModeProgress(progress?.position || {});
+  const sequence = getBestModeProgress(progress?.sequence || {});
+  return {
+    positionProgress: { boardKey: position.boardKey, stones: position.stones },
+    sequenceProgress: { boardKey: sequence.boardKey, stones: sequence.stones },
+    positionRank: position.rank,
+    sequenceRank: sequence.rank,
+  };
+}
+
 window.goVisDB = {
   saveProgress: async (progressObj) => {
     const user = requireUser();
@@ -221,6 +340,9 @@ window.goVisDB = {
     );
     if (Number.isFinite(skill)) miscUpdates.skill = skill;
 
+    const progressStats = buildDerivedProgressStats();
+    const localSkillSnapshot = getLocalSkillSnapshot();
+
     console.log('[CLOUD][STATS] Recording round for', user.uid, {
       completed,
       skipped,
@@ -272,12 +394,31 @@ window.goVisDB = {
               : 0,
           lastResult: skipped ? 'skip' : completed ? 'win' : 'fail',
         };
+        const skillValue = Number.isFinite(miscUpdates.skill)
+          ? miscUpdates.skill
+          : Number.isFinite(localSkillSnapshot)
+          ? localSkillSnapshot
+          : Number(prevStats.skill) || 0;
+        const positionRank = Number(progressStats.positionRank) || 0;
+        const sequenceRank = Number(progressStats.sequenceRank) || 0;
+        const statsPayload = {
+          totals,
+          streaks: nextStreaks,
+          skill: skillValue,
+          winStreak: nextStreaks.winStreak,
+          firstTryStreak: nextStreaks.firstTryStreak,
+          attempts: totals.attempts,
+          positionProgress: progressStats.positionProgress,
+          sequenceProgress: progressStats.sequenceProgress,
+          positionRank,
+          sequenceRank,
+        };
 
         transaction.set(
           docRef,
           {
             ...miscUpdates,
-            stats: { totals, streaks: nextStreaks },
+            stats: statsPayload,
             updatedAt: serverTimestamp(),
           },
           { merge: true }
@@ -344,6 +485,42 @@ function queueCloudSave(snapshot) {
   }, CLOUD_SAVE_DEBOUNCE_MS);
 }
 
+const STATS_SYNC_DEBOUNCE_MS = 1200;
+let statsSyncTimer = null;
+
+async function syncDerivedStatsToCloud() {
+  if (!auth.currentUser) return;
+  const progressStats = buildDerivedProgressStats();
+  const skillSnapshot = getLocalSkillSnapshot();
+  const statsPayload = {
+    positionProgress: progressStats.positionProgress,
+    sequenceProgress: progressStats.sequenceProgress,
+    positionRank: Number(progressStats.positionRank) || 0,
+    sequenceRank: Number(progressStats.sequenceRank) || 0,
+  };
+  if (Number.isFinite(skillSnapshot)) {
+    statsPayload.skill = skillSnapshot;
+  }
+  const payload = { stats: statsPayload };
+  if (Number.isFinite(skillSnapshot)) {
+    payload.skill = skillSnapshot;
+  }
+  try {
+    await setDoc(getUserDocRef(auth.currentUser.uid), payload, { merge: true });
+  } catch (err) {
+    console.error('[CLOUD] Failed to sync derived stats', err);
+  }
+}
+
+function queueStatsSync() {
+  if (!auth.currentUser) return;
+  if (statsSyncTimer) clearTimeout(statsSyncTimer);
+  statsSyncTimer = setTimeout(() => {
+    statsSyncTimer = null;
+    syncDerivedStatsToCloud();
+  }, STATS_SYNC_DEBOUNCE_MS);
+}
+
 async function syncCloudAndLocal(user) {
   if (!user) return;
   let cloud = null;
@@ -359,6 +536,35 @@ async function syncCloudAndLocal(user) {
   queueCloudSave(mergedProfile);
 }
 
+async function ensureUserProfile(user) {
+  if (!user) return;
+  const docRef = getUserDocRef(user.uid);
+  let existing = null;
+  try {
+    const snap = await getDoc(docRef);
+    existing = snap.exists() ? snap.data() : null;
+  } catch (err) {
+    console.warn('[CLOUD] Failed to read user profile', err);
+  }
+  const rawRegion = existing?.region;
+  const resolvedRegion = REGION_OPTIONS.includes(rawRegion)
+    ? rawRegion
+    : getDefaultRegion();
+  const payload = {
+    email: user.email || '',
+    displayName: user.displayName || '',
+    region: resolvedRegion,
+  };
+  await setDoc(
+    docRef,
+    {
+      ...payload,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
 function attachCloudSaveHook(attempt = 0) {
   if (attachCloudSaveHook.attached) return;
   if (typeof window.persistProgress !== 'function') {
@@ -372,6 +578,7 @@ function attachCloudSaveHook(attempt = 0) {
   window.persistProgress = (...args) => {
     const result = originalPersist.apply(window, args);
     queueCloudSave();
+    queueStatsSync();
     return result;
   };
 }
@@ -381,7 +588,9 @@ function initCloudSync() {
     console.log('[CLOUD] Auth state changed', user?.uid);
     if (!user) return;
     attachCloudSaveHook();
+    await ensureUserProfile(user);
     await syncCloudAndLocal(user);
+    queueStatsSync();
   });
 }
 

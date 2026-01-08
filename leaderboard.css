@@ -1,0 +1,138 @@
+.leaderboard-page {
+  background: var(--tan-bg, #f4efe6);
+  color: #1c1c1c;
+  min-height: 100vh;
+}
+
+.leaderboard-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px 8px;
+}
+
+.leaderboard-back {
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.leaderboard-title {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+.leaderboard-content {
+  padding: 10px 20px 40px;
+}
+
+.leaderboard-card {
+  background: var(--card-bg, #fff8ec);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.1);
+}
+
+.leaderboard-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.leaderboard-tab {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.leaderboard-tab.is-active {
+  background: #1f3a2d;
+  color: #fff;
+  border-color: transparent;
+}
+
+.leaderboard-filters {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.leaderboard-filters.is-active {
+  display: flex;
+}
+
+.leaderboard-select {
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 6px 10px;
+  background: #fff;
+}
+
+.leaderboard-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.leaderboard-row--you {
+  background: rgba(31, 58, 45, 0.08);
+}
+
+.leaderboard-you-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: #1f3a2d;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.leaderboard-empty,
+.leaderboard-login {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.leaderboard-primary {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  background: #1f3a2d;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .leaderboard-header {
+    padding: 14px 14px 4px;
+  }
+
+  .leaderboard-content {
+    padding: 10px 14px 30px;
+  }
+
+  .leaderboard-table th,
+  .leaderboard-table td {
+    padding: 8px 6px;
+  }
+}

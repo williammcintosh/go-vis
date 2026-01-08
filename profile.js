@@ -6,6 +6,7 @@ const els = {
   profileAvatar: document.getElementById('profileAvatar'),
   profileSkill: document.getElementById('profileSkill'),
   profileGold: document.getElementById('profileGold'),
+  profileRegion: document.getElementById('profileRegion'),
   streakWin: document.getElementById('streakWin'),
   streakFirstTry: document.getElementById('streakFirstTry'),
   streakSpeed: document.getElementById('streakSpeed'),
@@ -30,6 +31,8 @@ const els = {
 };
 
 const FALLBACK_AVATAR = './images/not-logged-in-avatar.png';
+const REGION_OPTIONS = ['NZ', 'AU', 'US', 'EU', 'OTHER'];
+let currentUser = null;
 
 function setIdentity(user, data) {
   const name =
@@ -147,11 +150,13 @@ async function loadProfile(user) {
 function showLoggedOut() {
   if (els.profileEmpty) els.profileEmpty.hidden = false;
   if (els.content) els.content.classList.add('is-logged-out');
+  if (els.profileRegion) els.profileRegion.disabled = true;
 }
 
 function hideLoggedOut() {
   if (els.profileEmpty) els.profileEmpty.hidden = true;
   if (els.content) els.content.classList.remove('is-logged-out');
+  if (els.profileRegion) els.profileRegion.disabled = false;
 }
 
 async function renderProfile(user) {
@@ -160,9 +165,16 @@ async function renderProfile(user) {
     return;
   }
   hideLoggedOut();
+  currentUser = user;
   const data = await loadProfile(user);
   const progress = data?.progress || (window.getLocalProgress?.() || {});
   setIdentity(user, data);
+  if (els.profileRegion) {
+    const region = REGION_OPTIONS.includes(data?.region)
+      ? data.region
+      : 'OTHER';
+    els.profileRegion.value = region;
+  }
   setStreaks(data?.stats?.streaks || {});
   setTotals(data?.stats?.totals || {});
   renderProgress(progress);
@@ -181,12 +193,24 @@ function init() {
     window.goVisAuth?.login();
   });
 
+  els.profileRegion?.addEventListener('change', async () => {
+    if (!currentUser) return;
+    const region = els.profileRegion.value;
+    if (!REGION_OPTIONS.includes(region)) return;
+    try {
+      await window.goVisData?.updateUser?.(currentUser.uid, { region });
+    } catch (err) {
+      console.error('[PROFILE] Failed to update region', err);
+    }
+  });
+
   const waitForAuth = () => {
     if (!window.goVisAuth) {
       setTimeout(waitForAuth, 50);
       return;
     }
     window.goVisAuth.onChange((user) => {
+      currentUser = user || null;
       renderProfile(user);
     });
   };

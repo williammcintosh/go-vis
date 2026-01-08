@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Leaderboard</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="leaderboard.css" />
+  </head>
+  <body class="leaderboard-page">
+    <header class="leaderboard-header">
+      <button id="leaderboardBack" class="leaderboard-back">← Back</button>
+      <h1 class="leaderboard-title">Leader Board</h1>
+    </header>
+
+    <main class="leaderboard-content" aria-live="polite">
+      <section class="leaderboard-card">
+        <div class="leaderboard-tabs" role="tablist">
+          <button
+            class="leaderboard-tab is-active"
+            data-tab="global"
+            type="button"
+            role="tab"
+            aria-selected="true"
+          >
+            Global
+          </button>
+          <button
+            class="leaderboard-tab"
+            data-tab="region"
+            type="button"
+            role="tab"
+            aria-selected="false"
+          >
+            Region
+          </button>
+        </div>
+        <div class="leaderboard-filters">
+          <label for="leaderboardRegion">Region</label>
+          <select id="leaderboardRegion" class="leaderboard-select">
+            <option value="NZ">NZ</option>
+            <option value="AU">AU</option>
+            <option value="US">US</option>
+            <option value="EU">EU</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+
+        <div id="leaderboardTableWrap" class="leaderboard-table-wrap">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Name</th>
+                <th>Skill</th>
+                <th>Position</th>
+                <th>Sequence</th>
+                <th>Win Streak</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardBody"></tbody>
+          </table>
+        </div>
+
+        <div id="leaderboardEmpty" class="leaderboard-empty" hidden>
+          <p>No leaderboard data yet.</p>
+        </div>
+      </section>
+
+      <div id="leaderboardLogin" class="leaderboard-login" hidden>
+        <p>Log in to view the leaderboard.</p>
+        <button id="leaderboardLoginBtn" class="leaderboard-primary">
+          Log in
+        </button>
+      </div>
+    </main>
+
+    <script type="module" src="./firebase-init.js"></script>
+    <script type="module" src="./leaderboard.js"></script>
+  </body>
+</html>

@@ -104,6 +104,16 @@ function renderAccountArea(user) {
     });
     menu.appendChild(profileBtn);
 
+    const leaderboardBtn = document.createElement('button');
+    leaderboardBtn.type = 'button';
+    leaderboardBtn.className = 'account-menu__item';
+    leaderboardBtn.textContent = 'Leader Board';
+    leaderboardBtn.addEventListener('click', () => {
+      closeMenu();
+      authApi?.login();
+    });
+    menu.appendChild(leaderboardBtn);
+
     const restartBtn = document.createElement('button');
     restartBtn.type = 'button';
     restartBtn.className = 'account-menu__item';
@@ -190,6 +200,15 @@ function renderAccountArea(user) {
     window.location.href = 'profile.html';
   });
   menu.appendChild(profileBtn);
+  const leaderboardBtn = document.createElement('button');
+  leaderboardBtn.type = 'button';
+  leaderboardBtn.className = 'account-menu__item';
+  leaderboardBtn.textContent = 'Leader Board';
+  leaderboardBtn.addEventListener('click', () => {
+    closeMenu();
+    window.location.href = 'leaderboard.html';
+  });
+  menu.appendChild(leaderboardBtn);
   menu.appendChild(logoutBtn);
   menu.appendChild(restartBtn);
   chip.addEventListener('click', (event) => toggleMenu(event, chip));

@@ -99,6 +99,27 @@
   margin-top: 12px;
 }
 
+.profile-region {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.profile-region label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.profile-select {
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  background: #fff;
+}
+
 .metric {
   background: var(--surface-soft);
   border-radius: 12px;
