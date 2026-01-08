@@ -129,6 +129,7 @@ const MODE_TAGLINES = {
 };
 
 const BONUS_COST_PER_STONE = 20;
+window.BONUS_COST_PER_STONE = BONUS_COST_PER_STONE;
 
 function setScrollLock(isLocked) {
   const method = isLocked ? 'add' : 'remove';
@@ -236,10 +237,23 @@ setupTimer({
   timerUI,
   handleTimerFinished: () => {},
 });
-let difficultyState = saveDifficultyState(loadDifficultyState());
+let difficultyByMode = {
+  position: saveDifficultyState({
+    ...loadDifficultyState('position'),
+    mode: 'position',
+  }),
+  sequence: saveDifficultyState({
+    ...loadDifficultyState('sequence'),
+    mode: 'sequence',
+  }),
+};
+let difficultyState = difficultyByMode[currentMode] || difficultyByMode.position;
 let nextPuzzleSuggestion = null;
 let levelSelectController = null;
-const MAX_SPEED_BONUS_THRESHOLD = 7000; // ms threshold for max speed bonus
+const POST_TIMER_BONUS_MS_PER_STONE = 3000;
+window.POST_TIMER_BONUS_MS_PER_STONE = POST_TIMER_BONUS_MS_PER_STONE;
+const getPostTimerBonusThresholdMs = (stoneCount) =>
+  Math.max(0, Number(stoneCount) || 0) * POST_TIMER_BONUS_MS_PER_STONE;
 const SKIP_BUTTON_IDS = ['skipBtn', 'skipButton', 'skipChallengeBtn'];
 const goldBadge = document.getElementById('goldBadge');
 const skillBadge = document.getElementById('skillBadge');
@@ -316,6 +330,7 @@ window.COLOR_BONUS = COLOR_BONUS;
 window.SEQUENCE_BONUS = SEQUENCE_BONUS;
 window.GOLD_STEP_DELAY = GOLD_STEP_DELAY;
 window.GOLD_AWARD_PAUSE = GOLD_AWARD_PAUSE;
+window.DEBUG_MODE = false;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 window.delay = delay;
@@ -523,6 +538,7 @@ const resetStateParams = {
   CHALLENGE_ATTEMPTS_KEY,
   saveDifficultyState,
   renderSkillRating: (rating) => renderSkillRatingAll(rating, rating),
+  currentMode: () => currentMode,
   normalizeProgress,
   setProgress: (progress) => {
     window.progress = progress;
@@ -547,7 +563,11 @@ startBtn?.addEventListener('click', () => {
     return;
   }
   const resetResult = resetGameStateUI(resetStateParams);
-  difficultyState = resetResult.difficultyState;
+  if (resetResult.difficultyStates) {
+    difficultyByMode = resetResult.difficultyStates;
+  }
+  difficultyState =
+    difficultyByMode[currentMode] || difficultyByMode.position || difficultyState;
   playerProgress = resetResult.playerProgress;
   challengeAttempts = resetResult.challengeAttempts;
   levelSelectController?.resetSelection();
@@ -564,7 +584,11 @@ confirmYes.addEventListener('click', async () => {
     }
   }
   const resetResult = resetGameStateUI(resetStateParams);
-  difficultyState = resetResult.difficultyState;
+  if (resetResult.difficultyStates) {
+    difficultyByMode = resetResult.difficultyStates;
+  }
+  difficultyState =
+    difficultyByMode[currentMode] || difficultyByMode.position || difficultyState;
   playerProgress = resetResult.playerProgress;
   challengeAttempts = resetResult.challengeAttempts;
   levelSelectController?.resetSelection();
@@ -610,12 +634,14 @@ levelSelectController = createLevelSelectController({
   setMode: (mode) => {
     currentMode = mode;
     window.currentMode = mode;
+    difficultyState = difficultyByMode[mode] || difficultyByMode.position;
+    renderSkillRatingAll(difficultyState?.rating, difficultyState?.rating);
   },
   setNextPuzzleSuggestion: (selection) => {
     nextPuzzleSuggestion = selection;
   },
   startGame: (mode) => startGame(mode),
-  getSkillRating: () => difficultyState?.rating ?? 0,
+  getSkillRating: (mode) => difficultyByMode[mode]?.rating ?? 0,
   getPlayerProgress: () => playerProgress,
 });
 
@@ -698,6 +724,7 @@ async function startGame(mode) {
   setScrollLock(true);
   showGoldBadge();
   showSkillBadge();
+  difficultyState = difficultyByMode[mode] || difficultyByMode.position || difficultyState;
   hideFeedbackPanel(document.getElementById('feedback'));
   const manualSelection = levelSelectController?.getSelection?.();
   if (manualSelection) {
@@ -733,6 +760,29 @@ async function startGame(mode) {
       lastStoneTap = v;
     },
   });
+
+  const appendRoundDebug = (event, details = {}) => {
+    if (!window.activeGame) return;
+    if (!window.activeGame.roundDebug) {
+      window.activeGame.roundDebug = { meta: {}, events: [] };
+    }
+    window.activeGame.roundDebug.events.push({
+      ts: Date.now(),
+      event,
+      ...details,
+    });
+  };
+  if (window.activeGame) {
+    window.activeGame.roundDebug = {
+      meta: {
+        stoneCount: config?.stoneCount ?? null,
+        totalTime: config?.time ?? null,
+        mode,
+        boardSize: boardDimension ?? null,
+      },
+      events: [],
+    };
+  }
 
   const board = document.getElementById('board');
   resetBoardUI(board, document);
@@ -786,7 +836,10 @@ async function startGame(mode) {
     checkAnswersFn: () => checkAnswers(),
     onTimerFinished: () => {},
     onTimerZero: () => {
-      console.log('[hint] triggering first move hint at timer zero');
+      appendRoundDebug('timerZeroHint', {
+        stoneCount: config?.stoneCount ?? null,
+        totalTime: config?.time ?? null,
+      });
       if (tutorialCompleted) {
         startCoachAfterTimerZero();
       }
@@ -863,6 +916,17 @@ async function startGame(mode) {
     skipButton.onclick = () => {
       timerFlow.markPlayerSkipped();
     };
+    appendRoundDebug('skipButtonWired', {
+      id: skipButton.id,
+      stoneCount: config?.stoneCount ?? null,
+      totalTime: config?.time ?? null,
+    });
+  } else {
+    appendRoundDebug('skipButtonMissing', {
+      idsTried: SKIP_BUTTON_IDS,
+      stoneCount: config?.stoneCount ?? null,
+      totalTime: config?.time ?? null,
+    });
   }
 
   setupTimer({
@@ -922,6 +986,9 @@ async function startGame(mode) {
   startTimerInterval();
   updateBonusAvailability();
 
+  const postTimerBonusThresholdMs = getPostTimerBonusThresholdMs(
+    config?.stoneCount
+  );
   const recordDifficultyOutcome = createDifficultyOutcomeRecorder({
     difficultyState,
     setDifficultyState: (state) => {
@@ -930,11 +997,11 @@ async function startGame(mode) {
     minStones: MIN_STONES,
     config,
     boardDimension,
-  skillRatingEl,
-  MAX_SPEED_BONUS_THRESHOLD,
-  calculateSpeedBonusFn: calculateSpeedBonus,
-  logSkillRatingDebug,
-  writeSkillDebug,
+    skillRatingEl,
+    postTimerBonusThresholdMs,
+    calculateSpeedBonusFn: calculateSpeedBonus,
+    logSkillRatingDebug,
+    writeSkillDebug,
     setNextPuzzleSuggestion: (next) => {
       const selected = levelSelectController?.getSelection?.();
       if (selected) {
@@ -956,6 +1023,7 @@ async function startGame(mode) {
       result?.difficultyState?.rating ?? difficultyState?.rating ?? ratingBefore;
     if (result?.difficultyState) {
       difficultyState = result.difficultyState;
+      difficultyByMode[currentMode] = difficultyState;
     }
     renderSkillRatingAll(ratingAfter, ratingAfter);
     levelSelectController?.handleRatingChange?.({
@@ -966,23 +1034,24 @@ async function startGame(mode) {
     return result;
   };
 
-const handleCheckAnswers = createCheckAnswersHandler({
-  timerUI,
-  config,
-  stones,
-  currentMode,
-  speedMultiplier,
-  MAX_SPEED_BONUS_THRESHOLD,
-  freezeBarState,
-  addGold,
-  logSkillRatingDebug,
-  getTimeLeft: () => timerFlow.getTimeLeft(),
-  onResult: ({ passed, targetWasCorrect }) => {
-    onAttemptResult({ passed, targetWasCorrect });
-  },
-});
-checkBtn.onclick = () => {
-  hideFirstMoveHint({ markSeen: false });
-  handleCheckAnswers();
-};
+  const handleCheckAnswers = createCheckAnswersHandler({
+    timerUI,
+    config,
+    stones,
+    currentMode,
+    speedMultiplier,
+    postTimerBonusPerStoneMs: POST_TIMER_BONUS_MS_PER_STONE,
+    postTimerBonusThresholdMs,
+    freezeBarState,
+    addGold,
+    logSkillRatingDebug,
+    getTimeLeft: () => timerFlow.getTimeLeft(),
+    onResult: ({ passed, targetWasCorrect }) => {
+      onAttemptResult({ passed, targetWasCorrect });
+    },
+  });
+  checkBtn.onclick = () => {
+    hideFirstMoveHint({ markSeen: false });
+    handleCheckAnswers();
+  };
 }

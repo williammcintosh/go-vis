@@ -91,6 +91,7 @@ function resetGameStateUI({
   CHALLENGE_ATTEMPTS_KEY,
   saveDifficultyState,
   renderSkillRating,
+  currentMode,
   normalizeProgress,
   setProgress,
   gameState,
@@ -106,10 +107,19 @@ function resetGameStateUI({
   localStorage.removeItem('goVizProgress');
   localStorage.removeItem('skill_rating');
   localStorage.removeItem('skill_progress');
+  localStorage.removeItem('skill_rating_sequence');
+  localStorage.removeItem('skill_progress_sequence');
   localStorage.removeItem(PLAYER_PROGRESS_KEY);
   localStorage.removeItem(CHALLENGE_ATTEMPTS_KEY);
 
-  const difficultyState = saveDifficultyState({ rating: 0, level: 1 });
+  const difficultyStates = {
+    position: saveDifficultyState({ rating: 0, level: 1, mode: 'position' }),
+    sequence: saveDifficultyState({ rating: 0, level: 1, mode: 'sequence' }),
+  };
+  const resolvedMode =
+    typeof currentMode === 'function' ? currentMode() : currentMode;
+  const activeMode = resolvedMode === 'sequence' ? 'sequence' : 'position';
+  const difficultyState = difficultyStates[activeMode];
   renderSkillRating(difficultyState.rating);
   const progress = normalizeProgress();
   setProgress?.(progress);
@@ -125,7 +135,7 @@ function resetGameStateUI({
   showScreen?.(difficulty, intro);
   refreshHomeButtons?.();
 
-  return { difficultyState, playerProgress, challengeAttempts };
+  return { difficultyState, difficultyStates, playerProgress, challengeAttempts };
 }
 
 export {

@@ -2,6 +2,7 @@ import { clearGoldRewardText, setGoldRewardBlocked } from './gold.js';
 
 const RATING_KEY = 'skill_rating';
 const SKILL_PROGRESS_KEY = 'skill_progress';
+const DEFAULT_MODE = 'position';
 const DEFAULT_RATING = 0;
 const DEFAULT_LEVEL = 1;
 const MIN_RATING = 0;
@@ -84,8 +85,26 @@ function renderSkillRating(targetEl, rating, fallbackRating) {
   return value;
 }
 
+function appendRoundDebug(event, details = {}) {
+  const activeGame = window.activeGame;
+  if (!activeGame) return;
+  if (!activeGame.roundDebug) {
+    activeGame.roundDebug = { meta: {}, events: [] };
+  }
+  activeGame.roundDebug.events.push({
+    ts: Date.now(),
+    event,
+    ...details,
+  });
+}
+
 function logSkillRatingDebug(data) {
-  console.log('[SkillRating]', JSON.stringify(data, null, 2));
+  const activeGame = window.activeGame;
+  if (!activeGame) return;
+  if (!activeGame.roundDebug) {
+    activeGame.roundDebug = { meta: {}, events: [] };
+  }
+  activeGame.roundDebug.skillRating = data;
 }
 
 function showRatingGain(amount, targetEl = null, options = {}) {
@@ -207,7 +226,9 @@ function writeSkillDebug(snapshot, level) {
   try {
     localStorage.setItem(SKILL_DEBUG_KEY, JSON.stringify(state));
   } catch (err) {
-    console.warn('Failed to write skill debug info', err);
+    appendRoundDebug('skillDebugWriteFailed', {
+      message: err?.message || String(err),
+    });
   }
 }
 
@@ -215,17 +236,37 @@ function calculateLevelDiff(stoneCount, boardSize) {
   return stoneCount * boardSize;
 }
 
-function loadDifficultyState() {
-  const savedRatingRaw = localStorage.getItem(RATING_KEY);
+function normalizeMode(mode) {
+  if (!mode) return DEFAULT_MODE;
+  return mode === 'sequence' ? 'sequence' : 'position';
+}
+
+function getRatingKey(mode) {
+  const resolved = normalizeMode(mode);
+  return resolved === DEFAULT_MODE ? RATING_KEY : `${RATING_KEY}_${resolved}`;
+}
+
+function getProgressKey(mode) {
+  const resolved = normalizeMode(mode);
+  return resolved === DEFAULT_MODE
+    ? SKILL_PROGRESS_KEY
+    : `${SKILL_PROGRESS_KEY}_${resolved}`;
+}
+
+function loadDifficultyState(mode = DEFAULT_MODE) {
+  const resolvedMode = normalizeMode(mode);
+  const ratingKey = getRatingKey(resolvedMode);
+  const progressKey = getProgressKey(resolvedMode);
+  const savedRatingRaw = localStorage.getItem(ratingKey);
   let savedRating = Number(savedRatingRaw);
   // Migrate legacy default rating (1000) to new baseline 0
   if (savedRatingRaw === '1000') {
     savedRating = DEFAULT_RATING;
-    localStorage.setItem(RATING_KEY, String(DEFAULT_RATING));
+    localStorage.setItem(ratingKey, String(DEFAULT_RATING));
   }
-  const storedLevel = localStorage.getItem(SKILL_PROGRESS_KEY);
+  const storedLevel = localStorage.getItem(progressKey);
   let legacyLevel = null;
-  if (!storedLevel) {
+  if (!storedLevel && resolvedMode === DEFAULT_MODE) {
     const legacyKey = Object.keys(localStorage).find((key) => {
       const lower = key.toLowerCase();
       return (
@@ -250,13 +291,14 @@ function loadDifficultyState() {
   return { rating, level };
 }
 
-function saveDifficultyState({ rating, level }) {
+function saveDifficultyState({ rating, level, mode = DEFAULT_MODE }) {
+  const resolvedMode = normalizeMode(mode);
   const nextRating = clampRating(
     Number.isFinite(rating) ? rating : DEFAULT_RATING
   );
   const nextLevel = Math.max(DEFAULT_LEVEL, Number(level) || DEFAULT_LEVEL);
-  localStorage.setItem(RATING_KEY, String(nextRating));
-  localStorage.setItem(SKILL_PROGRESS_KEY, String(nextLevel));
+  localStorage.setItem(getRatingKey(resolvedMode), String(nextRating));
+  localStorage.setItem(getProgressKey(resolvedMode), String(nextLevel));
   return { rating: nextRating, level: nextLevel };
 }
 
@@ -338,8 +380,8 @@ function triggerLevelOverlay(level) {
   // Legacy overlay intentionally disabled; unlock messaging handled elsewhere.
 }
 
-function incrementLevelIfNeeded(rating) {
-  const state = loadDifficultyState();
+function incrementLevelIfNeeded(rating, mode = DEFAULT_MODE) {
+  const state = loadDifficultyState(mode);
   const currentRating = Number.isFinite(rating) ? rating : state.rating;
   const currentLevel = state.level || DEFAULT_LEVEL;
   let nextLevel = currentLevel;
@@ -352,7 +394,7 @@ function incrementLevelIfNeeded(rating) {
 
   const leveledUp = nextLevel > currentLevel;
   if (leveledUp) {
-    saveDifficultyState({ rating: currentRating, level: nextLevel });
+    saveDifficultyState({ rating: currentRating, level: nextLevel, mode });
     triggerLevelOverlay(nextLevel);
   }
 
@@ -455,7 +497,7 @@ function createDifficultyOutcomeRecorder({
   computeRatingResultFn = computeRatingResult,
   calculateExpectedTimeFn = calculateExpectedTime,
   calculateSpeedBonusFn = () => 0,
-  MAX_SPEED_BONUS_THRESHOLD,
+  postTimerBonusThresholdMs,
   logSkillRatingDebug,
   writeSkillDebug,
   setNextPuzzleSuggestion,
@@ -563,8 +605,12 @@ function createDifficultyOutcomeRecorder({
     const updatedState = saveDifficultyState({
       rating: ratingResult.nextRating,
       level: difficultyState.level,
+      mode: currentMode,
     });
-    const leveled = incrementLevelIfNeededFn(ratingResult.nextRating);
+    const leveled = incrementLevelIfNeededFn(
+      ratingResult.nextRating,
+      currentMode
+    );
     levelAfter = leveled.level;
     const finalState = { rating: ratingResult.nextRating, level: levelAfter };
     setDifficultyState?.(finalState);
@@ -588,7 +634,7 @@ function createDifficultyOutcomeRecorder({
         endTimestampSolve: activeGame?.endTimestampSolve ?? null,
         solveDuration: activeGame?.solveDuration ?? null,
         maxSpeedBonus: Boolean(activeGame?.maxSpeedBonusAchieved),
-        maxSpeedBonusThreshold: MAX_SPEED_BONUS_THRESHOLD,
+        maxSpeedBonusThreshold: postTimerBonusThresholdMs,
         speedBonusUsed: Boolean(activeGame?.speedBonusUsed),
         speedBonusEstimate: calculateSpeedBonusFn(
           activeGame?.solveDuration || 0
@@ -614,14 +660,15 @@ function createDifficultyOutcomeRecorder({
 
     const skillRatingPayload = { ...debugPayload, ratingResult };
     if (window.goVisDB?.recordRound) {
-      console.log('[CLOUD][STATS] Trigger recordRound');
-      window.goVisDB
-        .recordRound(skillRatingPayload)
-        .catch((err) =>
-          console.error('[CLOUD][STATS] Failed to record round', err)
-        );
+      appendRoundDebug('recordRound', { status: 'started' });
+      window.goVisDB.recordRound(skillRatingPayload).catch((err) => {
+        appendRoundDebug('recordRound', {
+          status: 'error',
+          message: err?.message || String(err),
+        });
+      });
     } else {
-      console.warn('[CLOUD][STATS] goVisDB.recordRound not available');
+      appendRoundDebug('recordRound', { status: 'missing' });
     }
 
     logSkillRatingDebug?.(debugPayload);
@@ -643,6 +690,60 @@ function createDifficultyOutcomeRecorder({
       },
       levelAfter
     );
+
+    const roundDebug = activeGame?.roundDebug || {};
+    const unifiedDebug = {
+      meta: {
+        stoneCount: stoneCountUsed,
+        boardSize: boardSizeUsed,
+        totalTime: config?.time ?? null,
+        mode: currentMode ?? null,
+        completed,
+        timedOut,
+        playerSkipped,
+        perStone: {
+          timePerStone: activeGame?.timePerStone ?? null,
+          postTimerBonusPerStoneMs:
+            window.POST_TIMER_BONUS_MS_PER_STONE ?? null,
+          bonusCostPerStone: window.BONUS_COST_PER_STONE ?? null,
+          rewardBaselineStones: window.MIN_STONES ?? null,
+        },
+      },
+      timerPhase: {
+        barRatioAtHide: activeGame?.barRatioAtHide ?? null,
+        timeLeftAtHide: activeGame?.timeLeftAtHide ?? null,
+        computedRatio:
+          activeGame?.barRatioAtHide ??
+          (activeGame?.timeLeft && config?.time
+            ? Math.max(0, Math.min(1, (activeGame.timeLeft || 0) / config.time))
+            : null),
+        freezeReason: activeGame?.freezeReason ?? null,
+        usedAssistBonus: Boolean(activeGame?.usedAssistBonus),
+        usedSpeedBoost: Boolean(activeGame?.usedSpeedBoost),
+        skipRatio,
+      },
+      solvePhase: {
+        startTimestampSolve: activeGame?.startTimestampSolve ?? null,
+        endTimestampSolve: activeGame?.endTimestampSolve ?? null,
+        solveDuration: activeGame?.solveDuration ?? null,
+        maxSpeedBonus: Boolean(activeGame?.maxSpeedBonusAchieved),
+        maxSpeedBonusThreshold: activeGame?.maxSpeedBonusThresholdMs ?? null,
+        speedBonusUsed: Boolean(activeGame?.speedBonusUsed),
+      },
+      rewardPhase: {
+        rewardGiven: ratingResult.delta,
+        rewardRuleTriggered: ratingResult.rewardRuleTriggered,
+        branch: playerSkipped
+          ? 'skip/expedite'
+          : completed
+          ? 'completed'
+          : 'none',
+      },
+      events: roundDebug.events || [],
+    };
+    if (window.DEBUG_MODE) {
+      console.log('[RoundDebug]', JSON.stringify(unifiedDebug, null, 2));
+    }
 
     if (ratingResult.delta > 0) {
       const steps = [];

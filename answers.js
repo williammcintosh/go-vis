@@ -5,11 +5,23 @@ function checkAnswers({
   stones,
   currentMode,
   speedMultiplier,
-  MAX_SPEED_BONUS_THRESHOLD,
+  postTimerBonusPerStoneMs,
+  postTimerBonusThresholdMs,
   freezeBarState,
   addGold,
   logSkillRatingDebug,
 }) {
+  const appendRoundDebug = (event, details = {}) => {
+    if (!window.activeGame) return;
+    if (!window.activeGame.roundDebug) {
+      window.activeGame.roundDebug = { meta: {}, events: [] };
+    }
+    window.activeGame.roundDebug.events.push({
+      ts: Date.now(),
+      event,
+      ...details,
+    });
+  };
   if (window.activeGame?.timer) {
     clearInterval(window.activeGame.timer);
     window.activeGame.timer = null;
@@ -167,6 +179,21 @@ function checkAnswers({
 
   const finalBoardCorrect = missedCount === 0;
   const playerSkipped = Boolean(window.activeGame?.playerSkipped);
+  appendRoundDebug('checkAnswers', {
+    stoneCount:
+      window.activeGame?.challengeStoneCount ??
+      window.activeGame?.puzzleConfig?.stoneCount ??
+      config?.stoneCount ??
+      0,
+    playerSkipped,
+    timedOut: Boolean(window.activeGame?.timedOut),
+    barRatioAtHide:
+      window.activeGame?.barRatioAtHide ??
+      window.activeGame?.initialRemainingRatio ??
+      null,
+    timeLeftAtHide: window.activeGame?.timeLeftAtHide ?? null,
+    freezeReason: window.activeGame?.freezeReason ?? null,
+  });
   const barRatioAtHide =
     window.activeGame?.barRatioAtHide ??
     window.activeGame?.initialRemainingRatio ??
@@ -191,8 +218,31 @@ function checkAnswers({
       window.activeGame?.startTimestampSolve != null
         ? endTs - window.activeGame.startTimestampSolve
         : 0;
+    const stoneCount =
+      window.activeGame.challengeStoneCount ??
+      window.activeGame?.puzzleConfig?.stoneCount ??
+      config.stoneCount ??
+      0;
+    const perStoneMs = Number(postTimerBonusPerStoneMs) || 0;
+    const fallbackThreshold = Math.max(0, stoneCount * perStoneMs);
+    const resolvedThreshold = Number(postTimerBonusThresholdMs);
+    const postTimerThresholdMs = Number.isFinite(resolvedThreshold)
+      ? Math.max(0, resolvedThreshold)
+      : fallbackThreshold;
+    window.activeGame.maxSpeedBonusThresholdMs = postTimerThresholdMs;
     window.activeGame.maxSpeedBonusAchieved =
-      window.activeGame.solveDuration <= MAX_SPEED_BONUS_THRESHOLD;
+      postTimerThresholdMs > 0 &&
+      window.activeGame.solveDuration <= postTimerThresholdMs;
+    appendRoundDebug('postTimerBonus', {
+      stoneCount,
+      perStoneMs,
+      thresholdMs: postTimerThresholdMs,
+      calculation: `${stoneCount} * ${perStoneMs} = ${fallbackThreshold}`,
+      startTimestampSolve: window.activeGame.startTimestampSolve,
+      endTimestampSolve: window.activeGame.endTimestampSolve,
+      solveDuration: window.activeGame.solveDuration,
+      qualifies: window.activeGame.maxSpeedBonusAchieved,
+    });
     window.activeGame.speedBoostUsed = Boolean(
       window.activeGame.speedBoostUsed || speedMultiplier > 1
     );
@@ -320,7 +370,8 @@ function createCheckAnswersHandler({
   stones,
   currentMode,
   speedMultiplier,
-  MAX_SPEED_BONUS_THRESHOLD,
+  postTimerBonusPerStoneMs,
+  postTimerBonusThresholdMs,
   freezeBarState,
   addGold,
   logSkillRatingDebug,
@@ -334,7 +385,8 @@ function createCheckAnswersHandler({
       stones,
       currentMode,
       speedMultiplier,
-      MAX_SPEED_BONUS_THRESHOLD,
+      postTimerBonusPerStoneMs,
+      postTimerBonusThresholdMs,
       freezeBarState,
       addGold,
       logSkillRatingDebug,

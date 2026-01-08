@@ -614,8 +614,8 @@ function createLevelSelectController({
     }
   }
 
-  function getRating() {
-    const value = Number(getSkillRating?.() ?? 0);
+  function getRating(mode = state.mode) {
+    const value = Number(getSkillRating?.(mode) ?? getSkillRating?.() ?? 0);
     return Number.isFinite(value) ? value : 0;
   }
 

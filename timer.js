@@ -15,6 +15,19 @@ let deps = {
   handleTimerFinished: () => {},
 };
 
+function appendRoundDebug(event, details = {}) {
+  const activeGame = deps.getActiveGame();
+  if (!activeGame) return;
+  if (!activeGame.roundDebug) {
+    activeGame.roundDebug = { meta: {}, events: [] };
+  }
+  activeGame.roundDebug.events.push({
+    ts: Date.now(),
+    event,
+    ...details,
+  });
+}
+
 const SKIP_STORAGE_KEY = 'goVizEverSkippedTimer';
 let everSkippedTimer = false;
 try {
@@ -74,6 +87,18 @@ function initTimerFlow({
 
   const markPlayerSkipped = () => {
     if (!activeGame) return;
+    const stoneCount =
+      activeGame?.challengeStoneCount ??
+      activeGame?.puzzleConfig?.stoneCount ??
+      config?.stoneCount ??
+      0;
+    appendRoundDebug('skipButtonPressed', {
+      stoneCount,
+      timeLeft,
+      totalTime: config.time,
+      ratio: config.time ? timeLeft / config.time : 0,
+      timerRunning: Boolean(activeGame?.timer),
+    });
     everSkippedTimer = true;
     try {
       localStorage.setItem(SKIP_STORAGE_KEY, 'true');
@@ -118,6 +143,17 @@ function initTimerFlow({
       activeGame.timerEndTime = Date.now();
       activeGame.timedOut = true;
     }
+    const stoneCount =
+      activeGame?.challengeStoneCount ??
+      activeGame?.puzzleConfig?.stoneCount ??
+      config?.stoneCount ??
+      0;
+    appendRoundDebug('timerReachedZero', {
+      stoneCount,
+      timeLeft,
+      totalTime: config.time,
+      ratio: config.time ? timeLeft / config.time : 0,
+    });
     if (activeGame && activeGame.initialRemainingRatio === null) {
       freezeBarStateNextFrameFn('postHideFrame', timeLeft, config.time);
     }
@@ -129,8 +165,10 @@ function initTimerFlow({
     setTimeLeft(0);
     if (!timerZeroEmitted) {
       timerZeroEmitted = true;
-      console.log('[timer] timeLeft reached zero');
-      console.log('[timer] ZERO emit', { timeLeft, total: config.time });
+      appendRoundDebug('timerZeroEmitted', {
+        timeLeft,
+        totalTime: config.time,
+      });
       onTimerZero?.();
     }
     const existing = getCheckButtonShowTimeout?.();
@@ -233,7 +271,7 @@ function freezeBarState(reason, timeLeft, totalTime) {
     1;
   const ratioRaw = safeTotal ? timeLeft / safeTotal : 0;
   const ratio = Math.max(0, Math.min(1, ratioRaw));
-  console.log('[RATIO CALC]', {
+  appendRoundDebug('freezeBarState', {
     timeLeft,
     totalTime: safeTotal,
     computedRatio: ratio,
@@ -302,6 +340,17 @@ function handleDoubleTap(event) {
   if (event.type === 'dblclick') {
     deps.setSpeedMultiplier(deps.speedBoostMultiplier);
     if (activeGame) activeGame.speedBoostUsed = true;
+    const stoneCount =
+      activeGame?.challengeStoneCount ??
+      activeGame?.puzzleConfig?.stoneCount ??
+      deps.getConfig?.().stoneCount ??
+      0;
+    appendRoundDebug('doubleTapSpeedBoost', {
+      stoneCount,
+      timeLeft: activeGame?.timeLeft,
+      totalTime:
+        activeGame?.totalTime ?? activeGame?.puzzleConfig?.time ?? null,
+    });
     freezeBarStateNextFrame(
       'postDoubleTapFrame',
       activeGame?.timeLeft ?? activeGame?.puzzleConfig?.time ?? 0,
@@ -319,6 +368,17 @@ function handleDoubleTap(event) {
     }
     deps.setSpeedMultiplier(deps.speedBoostMultiplier);
     if (activeGame) activeGame.speedBoostUsed = true;
+    const stoneCount =
+      activeGame?.challengeStoneCount ??
+      activeGame?.puzzleConfig?.stoneCount ??
+      deps.getConfig?.().stoneCount ??
+      0;
+    appendRoundDebug('doubleTapSpeedBoost', {
+      stoneCount,
+      timeLeft: activeGame?.timeLeft,
+      totalTime:
+        activeGame?.totalTime ?? activeGame?.puzzleConfig?.time ?? null,
+    });
     freezeBarStateNextFrame(
       'postDoubleTapFrame',
       activeGame?.timeLeft ?? activeGame?.puzzleConfig?.time ?? 0,

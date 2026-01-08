@@ -213,9 +213,7 @@ function mergeProfiles(localProfile = {}, cloudProfile = {}) {
   };
   const { mergedProfile, decisions } = mergeProfiles(sampleLocal, sampleCloud);
   // eslint-disable-next-line no-console
-  console.log('[profileMerge] sample merge result', mergedProfile);
-  // eslint-disable-next-line no-console
-  console.log('[profileMerge] decisions', decisions);
+  console.log('[profileMerge]', { mergedProfile, decisions });
 })();
 
 export { mergeProfiles, mergeValue };

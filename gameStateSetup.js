@@ -85,6 +85,7 @@ function setupGameState({
   window.activeGame.playerSkipped = false;
   window.activeGame.freezeReason = null;
   window.activeGame.totalTime = config.time;
+  window.activeGame.timePerStone = TIME_PER_STONE;
   window.activeGame.challengeCompleted = false;
 
   return { config, boardDimension, updatedActiveGame: window.activeGame };
