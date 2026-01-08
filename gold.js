@@ -240,7 +240,7 @@ async function addGold({
     sequenceOrderIssues === 0
   ) {
     breakdown.push({
-      label: 'Perfect sequence',
+      label: 'Sequence',
       value: scaleValue(window.SEQUENCE_BONUS),
     });
   }
