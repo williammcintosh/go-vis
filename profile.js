@@ -10,7 +10,8 @@ const els = {
   streakFirstTry: document.getElementById('streakFirstTry'),
   streakSpeed: document.getElementById('streakSpeed'),
   lastResult: document.getElementById('lastResult'),
-  progressCards: document.getElementById('progressCards'),
+  progressCardsPosition: document.getElementById('progressCardsPosition'),
+  progressCardsSequence: document.getElementById('progressCardsSequence'),
   progressSection: document.getElementById('progressSection'),
   totalsBody: document.getElementById('totalsBody'),
   totals: {
@@ -95,10 +96,9 @@ function getBoardMaxStone(perStones) {
   return Math.max(...numericKeys);
 }
 
-function renderProgress(progress) {
-  if (!els.progressCards) return;
-  els.progressCards.innerHTML = '';
-  const boards = progress?.position || {};
+function renderProgressBoards(boards, container) {
+  if (!container) return;
+  container.innerHTML = '';
   const targets = ['5x5', '6x6', '7x7'];
   targets.forEach((boardKey) => {
     const card = document.createElement('div');
@@ -113,7 +113,7 @@ function renderProgress(progress) {
 
     const valueEl = document.createElement('div');
     valueEl.className = 'progress-card__value';
-    const maxStone = getBoardMaxStone(boards[boardKey]);
+    const maxStone = getBoardMaxStone(boards?.[boardKey]);
     if (maxStone) {
       valueEl.textContent = `${maxStone} stones`;
     } else {
@@ -122,8 +122,14 @@ function renderProgress(progress) {
     }
 
     card.appendChild(valueEl);
-    els.progressCards.appendChild(card);
+    container.appendChild(card);
   });
+}
+
+function renderProgress(progress) {
+  if (!els.progressCardsPosition || !els.progressCardsSequence) return;
+  renderProgressBoards(progress?.position || {}, els.progressCardsPosition);
+  renderProgressBoards(progress?.sequence || {}, els.progressCardsSequence);
   els.progressSection.style.display = '';
 }
 

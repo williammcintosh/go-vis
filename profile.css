@@ -162,6 +162,23 @@
   gap: 10px;
 }
 
+.progress-subsection {
+  display: grid;
+  gap: 10px;
+}
+
+.progress-subsection + .progress-subsection {
+  margin-top: 14px;
+}
+
+.progress-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.55);
+}
+
 .progress-card {
   background: var(--card-bg);
   border: 1px solid rgba(0, 0, 0, 0.04);
