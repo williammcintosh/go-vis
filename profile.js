@@ -35,11 +35,13 @@ const REGION_OPTIONS = ['NZ', 'AU', 'US', 'EU', 'OTHER'];
 let currentUser = null;
 
 function setIdentity(user, data) {
-  const name =
-    user?.displayName || data?.displayName || user?.email || 'Player';
-  const email = user?.email || '';
+  const fallbackName = `Player ${String(user?.uid || '').slice(0, 6)}`;
+  const name = user?.displayName || data?.displayName || fallbackName;
   if (els.profileName) els.profileName.textContent = name;
-  if (els.profileEmail) els.profileEmail.textContent = email;
+  if (els.profileEmail) {
+    els.profileEmail.textContent = '';
+    els.profileEmail.style.display = 'none';
+  }
   const avatarSrc = user?.photoURL || FALLBACK_AVATAR;
   if (els.profileAvatar) {
     els.profileAvatar.src = avatarSrc;

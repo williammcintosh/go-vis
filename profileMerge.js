@@ -201,19 +201,4 @@ function mergeProfiles(localProfile = {}, cloudProfile = {}) {
   return { mergedProfile: merged || {}, decisions };
 }
 
-// Tiny test harness
-(() => {
-  const sampleLocal = {
-    gold: 120,
-    updatedAt: '2024-01-01T10:00:00Z',
-  };
-  const sampleCloud = {
-    gold: 150,
-    updatedAt: '2024-02-01T10:00:00Z',
-  };
-  const { mergedProfile, decisions } = mergeProfiles(sampleLocal, sampleCloud);
-  // eslint-disable-next-line no-console
-  console.log('[profileMerge]', { mergedProfile, decisions });
-})();
-
 export { mergeProfiles, mergeValue };

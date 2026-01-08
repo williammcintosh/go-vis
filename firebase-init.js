@@ -8,15 +8,13 @@ import {
   signOut,
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
+  getFunctions,
+  httpsCallable,
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
+import {
   getFirestore,
-  collection,
   doc,
   getDoc,
-  getDocs,
-  query,
-  orderBy,
-  where,
-  limit,
   setDoc,
   serverTimestamp,
   runTransaction,
@@ -36,6 +34,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app);
 const getUserDocRef = (uid) => doc(db, 'users', uid);
 const REGION_OPTIONS = ['NZ', 'AU', 'US', 'EU', 'OTHER'];
 
@@ -90,10 +89,12 @@ window.goVisData = {
         authUser: auth.currentUser,
         progressOverride: progress?.progress || progress,
       });
+      const cleanProgress = { ...(progress || {}) };
+      if ('email' in cleanProgress) delete cleanProgress.email;
       await setDoc(
         getUserDocRef(uid),
         {
-          ...progress,
+          ...cleanProgress,
           ...derived,
           updatedAt: serverTimestamp(),
         },
@@ -111,10 +112,12 @@ window.goVisData = {
         authUser: auth.currentUser,
         progressOverride: payload?.progress,
       });
+      const cleanPayload = { ...(payload || {}) };
+      if ('email' in cleanPayload) delete cleanPayload.email;
       await setDoc(
         getUserDocRef(uid),
         {
-          ...payload,
+          ...cleanPayload,
           ...derived,
           updatedAt: serverTimestamp(),
         },
@@ -125,26 +128,13 @@ window.goVisData = {
     }
   },
   loadLeaderboard: async ({ region = null, limitTo = 50 } = {}) => {
-    const base = collection(db, 'users');
-    const constraints = [];
-    if (region) {
-      constraints.push(where('region', '==', region));
-    }
-    constraints.push(orderBy('stats.skill', 'desc'));
-    constraints.push(orderBy('stats.positionRank', 'desc'));
-    constraints.push(orderBy('stats.sequenceRank', 'desc'));
-    constraints.push(orderBy('stats.winStreak', 'desc'));
-    constraints.push(limit(limitTo));
-    // Composite index needed:
-    // Collection: users, Fields: region Asc, stats.skill Desc, stats.positionRank Desc,
-    // stats.sequenceRank Desc, stats.winStreak Desc.
-    const leaderboardQuery = query(base, ...constraints);
     try {
-      const snap = await getDocs(leaderboardQuery);
-      return snap.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
+      const callable = httpsCallable(functions, 'getLeaderboard');
+      const result = await callable({
+        region,
+        limit: limitTo,
+      });
+      return Array.isArray(result.data) ? result.data : result.data?.rows || [];
     } catch (err) {
       console.error('[LEADERBOARD] Query failed', err);
       throw err;
@@ -225,8 +215,11 @@ function buildCloudPayload(snapshot) {
     Number.isFinite(base.gold) && base.gold >= 0
       ? base.gold
       : Number(window?.gameState?.gold);
+  const progressSnapshot = resolveProgressSnapshot(base.progress, {
+    progress: base.progress,
+  });
   const payload = {
-    progress: base.progress || {},
+    progress: progressSnapshot || {},
     updatedAt: serverTimestamp(),
   };
   if (Number.isFinite(goldValue)) payload.gold = goldValue;
@@ -251,29 +244,33 @@ function getBestModeProgress(modeProgress = {}) {
   let bestBoardSize = 0;
   let bestBoardKey = null;
   let bestStones = 0;
+  let bestCompletedCount = 0;
   Object.entries(modeProgress).forEach(([boardKey, perBoard]) => {
     const size = parseBoardSize(boardKey);
     if (!Number.isFinite(size)) return;
     const maxStones = getMaxStoneCount(perBoard);
     if (!Number.isFinite(maxStones)) return;
+    const completedCount = Number(perBoard?.[String(maxStones)]) || 0;
     if (size > bestBoardSize) {
       bestBoardSize = size;
       bestBoardKey = boardKey;
       bestStones = maxStones;
+      bestCompletedCount = completedCount;
       return;
     }
     if (size === bestBoardSize && maxStones > bestStones) {
       bestBoardKey = boardKey;
       bestStones = maxStones;
+      bestCompletedCount = completedCount;
     }
   });
   if (!bestBoardKey) {
-    return { boardKey: null, stones: 0, rank: 0 };
+    return { boardKey: null, stones: 0, completedCount: 0 };
   }
   return {
     boardKey: bestBoardKey,
     stones: bestStones,
-    rank: bestBoardSize * 100 + bestStones,
+    completedCount: bestCompletedCount,
   };
 }
 
@@ -313,15 +310,35 @@ function resolveProgressSnapshot(progressOverride, existingDoc) {
   return getLocalPlayerProgress();
 }
 
+function sumCompletedCounts(modeProgress = {}) {
+  let total = 0;
+  Object.values(modeProgress || {}).forEach((perBoard) => {
+    if (!perBoard || typeof perBoard !== 'object') return;
+    Object.values(perBoard).forEach((value) => {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) total += parsed;
+    });
+  });
+  return total;
+}
+
 function buildDerivedProgressStats(progressSnapshot) {
   const progress = progressSnapshot || getLocalPlayerProgress();
   const position = getBestModeProgress(progress?.position || {});
   const sequence = getBestModeProgress(progress?.sequence || {});
   return {
-    positionProgress: { boardKey: position.boardKey, stones: position.stones },
-    sequenceProgress: { boardKey: sequence.boardKey, stones: sequence.stones },
-    positionRank: position.rank,
-    sequenceRank: sequence.rank,
+    positionBest: {
+      boardKey: position.boardKey,
+      stones: position.stones,
+      completedCount: position.completedCount,
+    },
+    sequenceBest: {
+      boardKey: sequence.boardKey,
+      stones: sequence.stones,
+      completedCount: sequence.completedCount,
+    },
+    positionCompletedTotal: sumCompletedCounts(progress?.position || {}),
+    sequenceCompletedTotal: sumCompletedCounts(progress?.sequence || {}),
   };
 }
 
@@ -339,6 +356,8 @@ async function deriveLeaderboardFields({ uid, authUser, progressOverride }) {
   const derived = buildDerivedProgressStats(progressSnapshot);
   const skillValue = Number.isFinite(Number(existing.skill))
     ? Number(existing.skill)
+    : Number.isFinite(Number(existing.stats?.skill))
+    ? Number(existing.stats.skill)
     : Number.isFinite(Number(localStorage.getItem('skill_rating')))
     ? Number(localStorage.getItem('skill_rating'))
     : 0;
@@ -348,10 +367,11 @@ async function deriveLeaderboardFields({ uid, authUser, progressOverride }) {
   const region = REGION_OPTIONS.includes(existing.region)
     ? existing.region
     : getDefaultRegion();
+  const fallbackName = `Player ${String(uid).slice(0, 6)}`;
 
   return {
-    email: authUser?.email || existing.email || '',
-    displayName: authUser?.displayName || existing.displayName || '',
+    displayName:
+      authUser?.displayName || existing.displayName || fallbackName,
     region,
     stats: {
       ...prevStats,
@@ -359,10 +379,10 @@ async function deriveLeaderboardFields({ uid, authUser, progressOverride }) {
       winStreak: Number(prevStreaks.winStreak) || 0,
       firstTryStreak: Number(prevStreaks.firstTryStreak) || 0,
       attempts: Number(prevTotals.attempts) || 0,
-      positionProgress: derived.positionProgress,
-      sequenceProgress: derived.sequenceProgress,
-      positionRank: Number(derived.positionRank) || 0,
-      sequenceRank: Number(derived.sequenceRank) || 0,
+      positionBest: derived.positionBest,
+      sequenceBest: derived.sequenceBest,
+      positionCompletedTotal: Number(derived.positionCompletedTotal) || 0,
+      sequenceCompletedTotal: Number(derived.sequenceCompletedTotal) || 0,
     },
   };
 }
@@ -507,8 +527,6 @@ window.goVisDB = {
           : Number.isFinite(localSkillSnapshot)
           ? localSkillSnapshot
           : Number(prevStats.skill) || 0;
-        const positionRank = Number(progressStats.positionRank) || 0;
-        const sequenceRank = Number(progressStats.sequenceRank) || 0;
         const statsPayload = {
           totals,
           streaks: nextStreaks,
@@ -516,10 +534,12 @@ window.goVisDB = {
           winStreak: nextStreaks.winStreak,
           firstTryStreak: nextStreaks.firstTryStreak,
           attempts: totals.attempts,
-          positionProgress: progressStats.positionProgress,
-          sequenceProgress: progressStats.sequenceProgress,
-          positionRank,
-          sequenceRank,
+          positionBest: progressStats.positionBest,
+          sequenceBest: progressStats.sequenceBest,
+          positionCompletedTotal:
+            Number(progressStats.positionCompletedTotal) || 0,
+          sequenceCompletedTotal:
+            Number(progressStats.sequenceCompletedTotal) || 0,
         };
 
         transaction.set(
@@ -679,11 +699,35 @@ function attachCloudSaveHook(attempt = 0) {
   };
 }
 
+function attachPlayerProgressHook(attempt = 0) {
+  if (attachPlayerProgressHook.attached) return;
+  if (typeof window.incrementPlayerProgress !== 'function') {
+    if (attempt > 20) return;
+    setTimeout(() => attachPlayerProgressHook(attempt + 1), 200);
+    return;
+  }
+
+  attachPlayerProgressHook.attached = true;
+  const originalIncrement = window.incrementPlayerProgress;
+  window.incrementPlayerProgress = (...args) => {
+    const result = originalIncrement.apply(window, args);
+    const snapshot = {
+      progress: getLocalPlayerProgress(),
+      gold: Number(window?.gameState?.gold),
+      updatedAt: Date.now(),
+    };
+    queueCloudSave(snapshot);
+    queueStatsSync();
+    return result;
+  };
+}
+
 function initCloudSync() {
   onAuthStateChanged(auth, async (user) => {
     console.log('[CLOUD] Auth state changed', user?.uid);
     if (!user) return;
     attachCloudSaveHook();
+    attachPlayerProgressHook();
     await ensureUserProfile(user);
     await syncCloudAndLocal(user);
     queueStatsSync();
@@ -692,3 +736,4 @@ function initCloudSync() {
 
 initCloudSync();
 attachCloudSaveHook();
+attachPlayerProgressHook();

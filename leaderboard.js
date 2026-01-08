@@ -27,7 +27,8 @@ function setTab(tab) {
 
 function formatProgress(progress) {
   if (!progress?.boardKey || !progress?.stones) return '--';
-  return `${progress.boardKey} · ${progress.stones}`;
+  const count = Number(progress.completedCount) || 0;
+  return `${progress.boardKey} · ${progress.stones} (${count})`;
 }
 
 function renderRows(rows) {
@@ -43,14 +44,17 @@ function renderRows(rows) {
     const tr = document.createElement('tr');
     const isYou = currentUser && row.id === currentUser.uid;
     if (isYou) tr.classList.add('leaderboard-row--you');
+    const fallbackName = `Player ${String(row.id || '').slice(0, 6)}`;
     const name =
-      row.displayName || row.email || row.id || 'Unknown';
+      row.displayName || fallbackName;
+    const regionLabel = row.region || 'OTHER';
     tr.innerHTML = `
       <td>${index + 1}</td>
       <td>${name}${isYou ? '<span class="leaderboard-you-badge">You</span>' : ''}</td>
       <td>${Number.isFinite(stats.skill) ? Math.round(stats.skill) : '--'}</td>
-      <td>${formatProgress(stats.positionProgress)}</td>
-      <td>${formatProgress(stats.sequenceProgress)}</td>
+      <td>${regionLabel}</td>
+      <td>${formatProgress(stats.positionBest)}</td>
+      <td>${formatProgress(stats.sequenceBest)}</td>
       <td>${Number.isFinite(stats.winStreak) ? stats.winStreak : 0}</td>
     `;
     els.body.appendChild(tr);
