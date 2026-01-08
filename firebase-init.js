@@ -75,25 +75,45 @@ window.goVisData = {
     return snap.exists() ? snap.data() : null;
   },
   saveProgress: async (uid, progress) => {
-    await setDoc(
-      getUserDocRef(uid),
-      {
-        ...progress,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+    try {
+      const derived = await deriveLeaderboardFields({
+        uid,
+        authUser: auth.currentUser,
+        progressOverride: progress?.progress || progress,
+      });
+      await setDoc(
+        getUserDocRef(uid),
+        {
+          ...progress,
+          ...derived,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.error('[CLOUD] Failed to save progress', err);
+    }
   },
   updateUser: async (uid, payload) => {
     if (!uid) return;
-    await setDoc(
-      getUserDocRef(uid),
-      {
-        ...payload,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+    try {
+      const derived = await deriveLeaderboardFields({
+        uid,
+        authUser: auth.currentUser,
+        progressOverride: payload?.progress,
+      });
+      await setDoc(
+        getUserDocRef(uid),
+        {
+          ...payload,
+          ...derived,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.error('[CLOUD] Failed to update user', err);
+    }
   },
   loadLeaderboard: async ({ region = null, limitTo = 50 } = {}) => {
     const base = collection(db, 'users');
@@ -110,8 +130,16 @@ window.goVisData = {
     // Collection: users, Fields: region Asc, stats.skill Desc, stats.positionRank Desc,
     // stats.sequenceRank Desc, stats.winStreak Desc.
     const leaderboardQuery = query(base, ...constraints);
-    const snap = await getDocs(leaderboardQuery);
-    return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    try {
+      const snap = await getDocs(leaderboardQuery);
+      return snap.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+    } catch (err) {
+      console.error('[LEADERBOARD] Query failed', err);
+      throw err;
+    }
   },
 };
 
@@ -262,8 +290,22 @@ function getLocalSkillSnapshot() {
   return Math.max(...values);
 }
 
-function buildDerivedProgressStats() {
-  const progress = getLocalPlayerProgress();
+function hasBoardProgress(progress) {
+  if (!progress || typeof progress !== 'object') return false;
+  const buckets = [progress.position, progress.sequence].filter(Boolean);
+  return buckets.some((bucket) =>
+    Object.keys(bucket || {}).some((key) => /\d+x\d+/.test(key))
+  );
+}
+
+function resolveProgressSnapshot(progressOverride, existingDoc) {
+  if (hasBoardProgress(progressOverride)) return progressOverride;
+  if (hasBoardProgress(existingDoc?.progress)) return existingDoc.progress;
+  return getLocalPlayerProgress();
+}
+
+function buildDerivedProgressStats(progressSnapshot) {
+  const progress = progressSnapshot || getLocalPlayerProgress();
   const position = getBestModeProgress(progress?.position || {});
   const sequence = getBestModeProgress(progress?.sequence || {});
   return {
@@ -274,12 +316,70 @@ function buildDerivedProgressStats() {
   };
 }
 
+async function deriveLeaderboardFields({ uid, authUser, progressOverride }) {
+  if (!uid) return {};
+  let existing = {};
+  try {
+    const snap = await getDoc(getUserDocRef(uid));
+    existing = snap.exists() ? snap.data() || {} : {};
+  } catch (err) {
+    console.warn('[CLOUD] Failed to read user doc for leaderboard stats', err);
+  }
+
+  const progressSnapshot = resolveProgressSnapshot(progressOverride, existing);
+  const derived = buildDerivedProgressStats(progressSnapshot);
+  const skillValue = Number.isFinite(Number(existing.skill))
+    ? Number(existing.skill)
+    : Number.isFinite(Number(localStorage.getItem('skill_rating')))
+    ? Number(localStorage.getItem('skill_rating'))
+    : 0;
+  const prevStats = existing.stats || {};
+  const prevStreaks = prevStats.streaks || {};
+  const prevTotals = prevStats.totals || {};
+  const region = REGION_OPTIONS.includes(existing.region)
+    ? existing.region
+    : getDefaultRegion();
+
+  return {
+    email: authUser?.email || existing.email || '',
+    displayName: authUser?.displayName || existing.displayName || '',
+    region,
+    stats: {
+      ...prevStats,
+      skill: skillValue,
+      winStreak: Number(prevStreaks.winStreak) || 0,
+      firstTryStreak: Number(prevStreaks.firstTryStreak) || 0,
+      attempts: Number(prevTotals.attempts) || 0,
+      positionProgress: derived.positionProgress,
+      sequenceProgress: derived.sequenceProgress,
+      positionRank: Number(derived.positionRank) || 0,
+      sequenceRank: Number(derived.sequenceRank) || 0,
+    },
+  };
+}
+
 window.goVisDB = {
   saveProgress: async (progressObj) => {
     const user = requireUser();
     const payload = buildCloudPayload(progressObj);
-    console.log('[CLOUD] Saving progress for', user.uid, payload);
-    await setDoc(getUserDocRef(user.uid), payload, { merge: true });
+    try {
+      const derived = await deriveLeaderboardFields({
+        uid: user.uid,
+        authUser: user,
+        progressOverride: payload.progress,
+      });
+      console.log('[CLOUD] Saving progress for', user.uid, payload);
+      await setDoc(
+        getUserDocRef(user.uid),
+        {
+          ...payload,
+          ...derived,
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.error('[CLOUD] Failed to save progress', err);
+    }
   },
   resetProfile: async () => {
     const user = requireUser();
@@ -490,23 +590,20 @@ let statsSyncTimer = null;
 
 async function syncDerivedStatsToCloud() {
   if (!auth.currentUser) return;
-  const progressStats = buildDerivedProgressStats();
-  const skillSnapshot = getLocalSkillSnapshot();
-  const statsPayload = {
-    positionProgress: progressStats.positionProgress,
-    sequenceProgress: progressStats.sequenceProgress,
-    positionRank: Number(progressStats.positionRank) || 0,
-    sequenceRank: Number(progressStats.sequenceRank) || 0,
-  };
-  if (Number.isFinite(skillSnapshot)) {
-    statsPayload.skill = skillSnapshot;
-  }
-  const payload = { stats: statsPayload };
-  if (Number.isFinite(skillSnapshot)) {
-    payload.skill = skillSnapshot;
-  }
   try {
-    await setDoc(getUserDocRef(auth.currentUser.uid), payload, { merge: true });
+    const derived = await deriveLeaderboardFields({
+      uid: auth.currentUser.uid,
+      authUser: auth.currentUser,
+      progressOverride: getLocalPlayerProgress(),
+    });
+    await setDoc(
+      getUserDocRef(auth.currentUser.uid),
+      {
+        ...derived,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
   } catch (err) {
     console.error('[CLOUD] Failed to sync derived stats', err);
   }
@@ -538,31 +635,22 @@ async function syncCloudAndLocal(user) {
 
 async function ensureUserProfile(user) {
   if (!user) return;
-  const docRef = getUserDocRef(user.uid);
-  let existing = null;
   try {
-    const snap = await getDoc(docRef);
-    existing = snap.exists() ? snap.data() : null;
+    const derived = await deriveLeaderboardFields({
+      uid: user.uid,
+      authUser: user,
+    });
+    await setDoc(
+      getUserDocRef(user.uid),
+      {
+        ...derived,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
   } catch (err) {
-    console.warn('[CLOUD] Failed to read user profile', err);
+    console.warn('[CLOUD] Failed to ensure user profile', err);
   }
-  const rawRegion = existing?.region;
-  const resolvedRegion = REGION_OPTIONS.includes(rawRegion)
-    ? rawRegion
-    : getDefaultRegion();
-  const payload = {
-    email: user.email || '',
-    displayName: user.displayName || '',
-    region: resolvedRegion,
-  };
-  await setDoc(
-    docRef,
-    {
-      ...payload,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
 }
 
 function attachCloudSaveHook(attempt = 0) {
