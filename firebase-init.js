@@ -39,6 +39,15 @@ const db = getFirestore(app);
 const getUserDocRef = (uid) => doc(db, 'users', uid);
 const REGION_OPTIONS = ['NZ', 'AU', 'US', 'EU', 'OTHER'];
 
+window.__dumpUserDoc = async () => {
+  if (!auth.currentUser) {
+    console.warn('No user logged in');
+    return;
+  }
+  const snap = await getDoc(getUserDocRef(auth.currentUser.uid));
+  console.log(JSON.stringify(snap.data(), null, 2));
+};
+
 function getDefaultRegion() {
   const lang = (navigator.language || '').toLowerCase();
   if (lang.startsWith('en-nz')) return 'NZ';
@@ -428,8 +437,7 @@ window.goVisDB = {
         (typeof rewardPhase.rewardRuleTriggered === 'string' &&
           rewardPhase.rewardRuleTriggered.includes('skip75'))) &&
       barRatio >= 0.75;
-    const firstTry =
-      completed && rewardPhase.rewardRuleTriggered !== 'retry';
+    const firstTry = completed && rewardPhase.rewardRuleTriggered !== 'retry';
     const isRetry = rewardPhase.rewardRuleTriggered === 'retry';
 
     const miscUpdates = {};
